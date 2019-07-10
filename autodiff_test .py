@@ -1,3 +1,4 @@
+#!/bin/python3.7
 import autodiff as ad
 import numpy as np
 
@@ -463,3 +464,56 @@ def test_logistic_loss():
 
     assert expected_L_val == L_val
     assert np.sum(np.abs(expected_w_grad - w_grad_val)) < 1E-9
+
+
+if __name__ == "__main__":
+    print("Autodiff test started!")
+    test_identity()
+    print("AC")
+    test_add_by_const()
+    print("AC")
+    test_sub_by_const()
+    print("AC")
+    test_neg()
+    print("AC")
+    test_mul_by_const()
+    print("AC")
+    test_div_two_vars()
+    print("AC")
+    test_div_by_const()
+    print("AC")
+    test_add_two_vars()
+    print("AC")
+    test_mul_two_vars()
+    print("AC")
+    test_add_mul_mix_1()
+    print("AC")
+    test_add_mul_mix_2()
+    print("AC")
+    test_add_mul_mix_3()
+    print("AC")
+    test_grad_of_grad()
+    print("AC")
+    test_matmul_two_vars()
+    print("AC")
+    test_log_op()
+    print("AC")
+    test_log_two_vars()
+    print("AC")
+    test_exp_op()
+    print("AC")
+    test_exp_mix_op()
+    print("AC")
+    test_reduce_sum()
+    print("AC")
+    test_reduce_sum_mix()
+    print("AC")
+    test_mix_all()
+    print("AC")
+    test_logistic()
+    print("AC")
+    test_log_logistic()
+    print("AC")
+    test_logistic_loss()
+    print("AC")
+    print("Congratulations! You have passed all the tests!")

@@ -5,21 +5,62 @@ class Node(object):
     """
     node in the computation graph
     """
+    op = None
+    name = ""
+    inputs = []
+    const_attr = None
+
     def __init__(self):
-        self.Op = None
         self.name = ""
-        self.inputs = []
 
     def __add__(self, other):
-        new_add_node = Add_Op(self, other)
-        return new_add_node
+        if isinstance(other, Node):
+            new_node = add_op(self, other)
+        else:
+            new_node = addconst_op(self, other)
+        return new_node
 
     def __sub__(self, other):
-        if isinstance(self, other):
-            return Sub_Op(self, other)
+        if isinstance(other, Node):
+            return sub_op(self, other)
         else:
-            return SubConst_Op(self, other)
+            return subconst_op(self, other)
 
+    def __rsub__(self, other):
+        if isinstance(other, Node):
+            # this line will never be implemented
+            print("wtf??")
+        else:
+            return rsubconst_op(self, other)
+
+    def __mul__(self, other):
+        if isinstance(self, Node):
+            new_node = mul_op(self, other)
+        else:
+            new_node = mulconst_op(self, other)
+        return new_node
+
+    def __neg__(self):
+        new_node = neg_op(self)
+        return new_node
+
+    def __truediv__(self, other):
+        if isinstance(other, Node):
+            new_node = div_op(self, other)
+        else:
+            new_node = divconst_op(self, other)
+        return new_node
+
+    def __rtruediv__(self, other):
+        """other / self when other is not a node??"""
+        if isinstance(other, Node):
+            new_node = rdiv_op(self, other)
+        else:
+            new_node = rdivconst_op(self, other)
+        return new_node
+
+    __radd__ = __add__
+    __rmul__ = __mul__
 
 
 class Op(object):
@@ -28,11 +69,11 @@ class Op(object):
     """
     def __call__(self):
         new_node = Node()
-        new_node.Op = self
+        new_node.op = self
         new_node.name = ""
         return new_node
 
-    def gradient(self, tnode, output_grad):
+    def gradients(self, tnode, output_grad):
         assert False
 
     def compute(self, tnode, input_vals):
@@ -44,22 +85,71 @@ class Mul_Op(Op):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
         new_node.name = "%s * %s" % (node_a.name, node_b.name)
+        return new_node
 
-    def gradient(self, tnode, output_grad):
+    def gradients(self, tnode, output_grad):
         return [tnode.inputs[1] * output_grad, tnode.inputs[0] * output_grad]
 
+    def compute(self, tnode, input_vals):
+        assert len(input_vals) == 2
+        return input_vals[0] * input_vals[1]
+
+
+class MulConst_Op(Op):
+    def __call__(self, node_a, const_val):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
+        new_node.const_attr = const_val
+        new_node.name = "%s * %s" % (node_a.name, str(const_val))
+
+    def gradients(self, tnode, output_grad):
+        return [output_grad * tnode.const_attr]
+
+    def compute(self, tnode, input_vals):
+        assert len(input_vals) == 1
+        return input_vals[0] * tnode.const_attr
 
 class Add_Op(Op):
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
         new_node.name = "%s + %s" % (node_a.namem, node_b.name)
+        return new_node
 
-    def gradient(self, tnode, output_grad):
-        pass
+    def gradients(self, tnode, output_grad):
+        return [output_grad, output_grad]
 
     def compute(self, tnode, input_vals):
-        pass
+        return input_vals[0] + input_vals[1]
+
+class AddConst_Op(Op):
+    def __call__(self, node_a, const_val):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
+        new_node.const_attr = const_val
+        new_node.name = "%s + %s" % (node_a.name, str(const_val))
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        assert len(input_vals) == 1
+        return input_vals[0] + tnode.const_attr
+
+    def gradients(self, tnode, output_grad):
+        return [output_grad]
+
+
+class Neg_Op(Op):
+    def __call__(self, node_a):
+        new_node = Op.__call__()
+        new_node.inputs[0] = node_a
+        new_node.name = "-%s" % node_a.name
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return -input_vals[0]
+
+    def gradients(self, tnode, output_grad):
+        return [-output_grad]
 
 
 class Sub_Op(Op):
@@ -67,32 +157,105 @@ class Sub_Op(Op):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
         new_node.name = "%s - %s" % (node_a.name, node_b.name)
+        return new_node
 
-    def gradient(self, tnode, output_grad):
-        pass
+    def gradients(self, tnode, output_grad):
+        return [output_grad, -output_grad]
 
     def compute(self, tnode, input_vals):
-        return np.subtract(input_vals[0], input_vals[1])
+        return input_vals[0] - input_vals[1]
+
 
 class SubConst_Op(Op):
-    def __call__(self, node_a, node_b):
+    def __call__(self, node_a, const_val):
         new_node = Op.__call__(self)
-        new_node.inputs = [node_a, node_b]
-        new_node.name = "%s - %s" % (node_a.name, node_b.name)
+        new_node.inputs = [node_a]
+        new_node.const_attr = const_val
+        new_node.name = "%s - %s" % (node_a.name, str(const_val))
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return input_vals[0] - tnode.const_attr
+
+    def gradients(self, tnode, output_grad):
+        return [output_grad]
+
+
+class RSubConst_Op(Op):
+    def __call__(self, node_a, const_val):
+        new_node = Op.__call__(self)
+        new_node.const_attr = const_val
+        new_node.inputs = [node_a]
+        new_node.name = "%s - %s" % (str(const_val), node_a.name)
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return tnode.const_attr - input_vals[0]
+
+    def gradients(self, tnode, output_grad):
+        return [-output_grad]
 
 
 class Div_Op(Op):
+    """
+    the computation of grad is relatively complex, it is ok for a graph
+    """
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
         new_node.name = "%s / %s" % (node_a.namem, node_b.name)
+        return new_node
 
-    def gradient(self, tnode, output_grad):
-        pass
+    def gradients(self, tnode, output_grad):
+        return [output_grad / tnode.inputs[1],
+            -output_grad * tnode.inputs[0] / (tnode.inputs[1] * tnode.inputs[1])]
 
     def compute(self, tnode, input_vals):
-        pass
+        return input_vals[0] / input_vals[1]
 
+
+class DivConst_Op(Op):
+    def __call__(self, node_a, const_val):
+        new_node = Op.__call__(self)
+        new_node.const_attr = const_val
+        new_node.inputs = [node_a]
+        new_node.name = "%s / %s" % (node_a.name, str(const_val))
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return input_vals[0] / tnode.const_attr
+
+    def gradients(self, tnode, output_grad):
+        return [output_grad / tnode.const_attr]
+
+
+class RDiv_Op(Op):
+    def __call__(self, node_a, node_b):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a, node_b]
+        new_node.name = "%s / %s" % (node_b.name, node_a.name)
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return input_vals[1] / input_vals[0]
+
+    def gradients(self, tnode, output_grad):
+        return [-output_grad * tnode.inputs[1] / (tnode.inputs[0] * tnode.inputs[0]) ,
+              output_grad / tnode.inputs[0] ]
+
+class RDivConst_Op(Op):
+    def __call__(self, node_a, const_val):
+        new_node = Op.__call__(self)
+        new_node.const_attr = const_val
+        new_node.inputs = [node_a]
+        new_node.name = "%s / %s" % (str(const_val), node_a.name)
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return tnode.const_attr / input_vals[0]
+
+    def gradients(self, tnode, output_grad):
+        return [-output_grad * tnode.const_attr / (tnode.inputs[0] * tnode.inputs[0])]
 
 
 class PlaceholderOp(Op):
@@ -101,23 +264,109 @@ class PlaceholderOp(Op):
         new_node = Op.__call__(self)
         return new_node
 
-    def gradient(self, tnode, output_grad):
+    def gradients(self, tnode, output_grad):
         return None
+
+    def compute(self, tnode, input_vals):
+        pass
+
+
+class Oneslike_Op(Op):
+    def __call__(self, node_a):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
+        new_node.name = "Oneslike(%s)" % node_a.name
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return [Zerolike_Op(tnode.inputs[0])]
+
+    def compute(self, tnode, input_vals):
+        assert(isinstance(input_vals[0], np.ndarray))
+        return np.ones(input_vals[0].shape)
+
+
+class Zerolike_Op(Op):
+    def __call__(self, node_a):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
+        new_node.name = "Oneslike(%s)" % node_a.name
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return [Zerolike_Op(tnode.inputs[0])]
+
+    def compute(self, tnode, input_vals):
+
 
 
 class Executor(object):
     def __init__(self, eval_node_list):
         self.eval_node_list = eval_node_list
+        self.ValueNode = dict()
 
     def run(self, feed_dict):
-        self.node_to_val_map = dict(feed_dict)
+        """Core function to compute the gradients"""
+        self.ValueNode = dict(feed_dict)
+        TopoOrder = find_topo_sort(self.eval_node_list)
+        for node in TopoOrder:
+            if isinstance(node.op, PlaceholderOp):
+                continue
+            print(node.name)
+            vals = [self.ValueNode[subnode] for subnode in node.inputs]
+            res = node.op.compute(node, vals)
+            self.ValueNode[node] = res if isinstance(res, np.ndarray) else np.array(res)
+
+        ans = [self.ValueNode[node] for node in self.eval_node_list]
+        return ans
 
 
-
-def Variablel(name):
+def Variable(name):
     new_op = PlaceholderOp()
-    new_op.name = name
-    return new_op
+    new_node = new_op()
+    new_node.name = name
+    return new_node
+
+
+def gradients(node_y, node_x_list):
+    """
+    Core function
+    :param node_y:
+    :param node_x_list:
+    :return: [partial_y/partial_xi ]
+    """
+    PartialList = {node_y: [oneslike_op(node_y)]}
+    NodeToGrad = {}
+    ReverseTopoOrder = reversed(find_topo_sort([node_y]))
+    for node in ReverseTopoOrder:
+        grad = sum_parital(PartialList[node])
+        NodeToGrad[node] = grad
+        grads = node.op.gradients(node, grad)
+        for i in range(len(node.inputs)):
+            son = node.inputs[i]
+            grad_list = PartialList.get(son, [])
+            grad_list.append(grads[i])
+            PartialList[son] = grad_list
+
+    ans = [NodeToGrad[node] for node in node_x_list]
+    return ans
+
+
+mul_op = Mul_Op()
+mulconst_op = MulConst_Op()
+add_op = Add_Op()
+addconst_op = AddConst_Op()
+sub_op = Sub_Op()
+subconst_op = SubConst_Op()
+rsubconst_op = RSubConst_Op()
+div_op = Div_Op()
+divconst_op = DivConst_Op()
+rdiv_op = RDiv_Op()
+rdivconst_op = RDivConst_Op()
+neg_op = Neg_Op()
+oneslike_op = Oneslike_Op()
+zerolike_op = Zerolike_Op()
+
 
 
 def find_topo_sort(node_list):
@@ -144,3 +393,10 @@ def topo_sort_dfs(node, visited, topo_order):
     for n in node.inputs:
         topo_sort_dfs(n, visited, topo_order)
     topo_order.append(node)
+
+
+def sum_parital(node_list):
+    """Custom sum function in order to avoid create redundant nodes in Python sum implementation."""
+    from operator import add
+    from functools import reduce
+    return reduce(add, node_list)
