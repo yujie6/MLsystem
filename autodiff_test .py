@@ -281,7 +281,7 @@ def test_log_op():
     y_val, grad_x1_val = executor.run(feed_dict={x1: x1_val})
 
     assert isinstance(y, ad.Node)
-    assert np.array_equal(y_val, np.log(x1_val))
+    assert np.array_equal(y_val, np.log(x1_val))  # y = 1/x
     assert np.array_equal(grad_x1_val, 1 / x1_val)
 
 

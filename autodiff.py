@@ -1,4 +1,6 @@
 import numpy as np
+from operator import add
+from functools import reduce
 
 
 class Node(object):
@@ -9,6 +11,8 @@ class Node(object):
     name = ""
     inputs = []
     const_attr = None
+    matmul_attr_tans_A = False
+    matmul_attr_tans_B = False
 
     def __init__(self):
         self.name = ""
@@ -67,6 +71,7 @@ class Op(object):
     """
     Operation in the graph, such as mul, add, exp...
     """
+
     def __call__(self):
         new_node = Node()
         new_node.op = self
@@ -110,6 +115,7 @@ class MulConst_Op(Op):
         assert len(input_vals) == 1
         return input_vals[0] * tnode.const_attr
 
+
 class Add_Op(Op):
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
@@ -122,6 +128,7 @@ class Add_Op(Op):
 
     def compute(self, tnode, input_vals):
         return input_vals[0] + input_vals[1]
+
 
 class AddConst_Op(Op):
     def __call__(self, node_a, const_val):
@@ -201,6 +208,7 @@ class Div_Op(Op):
     """
     the computation of grad is relatively complex, it is ok for a graph
     """
+
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
@@ -209,7 +217,7 @@ class Div_Op(Op):
 
     def gradients(self, tnode, output_grad):
         return [output_grad / tnode.inputs[1],
-            -output_grad * tnode.inputs[0] / (tnode.inputs[1] * tnode.inputs[1])]
+                -output_grad * tnode.inputs[0] / (tnode.inputs[1] * tnode.inputs[1])]
 
     def compute(self, tnode, input_vals):
         return input_vals[0] / input_vals[1]
@@ -241,8 +249,8 @@ class RDiv_Op(Op):
         return input_vals[1] / input_vals[0]
 
     def gradients(self, tnode, output_grad):
-        return [-output_grad * tnode.inputs[1] / (tnode.inputs[0] * tnode.inputs[0]) ,
-              output_grad / tnode.inputs[0] ]
+        return [-output_grad * tnode.inputs[1] / (tnode.inputs[0] * tnode.inputs[0]),
+                output_grad / tnode.inputs[0]]
 
 
 class RDivConst_Op(Op):
@@ -261,21 +269,82 @@ class RDivConst_Op(Op):
 
 
 class MatMul_Op(Op):
-    def __call__(self, node_a, node_b):
+    """Op to matrix multiply two nodes."""
+
+    def __call__(self, node_A, node_B, trans_A=False, trans_B=False):
+        """Create a new node that is the result a matrix multiple of two input nodes.
+
+        Parameters
+        ----------
+        node_A: lhs of matrix multiply
+        node_B: rhs of matrix multiply
+        trans_A: whether to transpose node_A
+        trans_B: whether to transpose node_B
+
+        Returns
+        -------
+        Returns a node that is the result a matrix multiple of two input nodes.
+        """
         new_node = Op.__call__(self)
-        new_node.inputs = [node_a, node_b]
-        new_node.name = "%s * %s" % (node_a.name, node_b.name)
+        new_node.matmul_attr_trans_A = trans_A
+        new_node.matmul_attr_trans_B = trans_B
+        new_node.inputs = [node_A, node_B]
+        new_node.name = "matmul(%s, %s, %s, %s)" % (node_A.name, node_B.name, str(trans_A), str(trans_B))
         return new_node
 
     def gradients(self, tnode, output_grad):
-        pass
+        """matrix gradient is a bit different, but almost the same as
+        the one of multi-variable function
+        Given gradient of multiply node, return gradient contributions to each input.
+               Useful formula: if Y=AB, then dA=dY B^T, dB=A^T dY
+        """
+        return [matmul_op(output_grad, tnode.inputs[1], False, True),
+                matmul_op(tnode.inputs[0], output_grad, True, False)]
 
     def compute(self, tnode, input_vals):
-        return np.matmul(input_vals[0], input_vals[1])
+        """Given values of input nodes, return result of matrix multiplication."""
+        mat_A = input_vals[0]
+        mat_B = input_vals[1]
+        if tnode.matmul_attr_trans_A:
+            mat_A = mat_A.T
+        if tnode.matmul_attr_trans_B:
+            mat_B = mat_B.T
+        return np.matmul(mat_A, mat_B)
+
+
+class Exp_Op(Op):
+    def __call__(self, node_a):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
+        new_node.name = "exp(%s)" % (node_a.name)
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        assert len(input_vals) == 1
+        return np.exp(input_vals[0])
+
+    def gradients(self, tnode, output_grad):
+        return [output_grad * tnode]
+
+
+class Log_Op(Op):
+    def __call__(self, node_a):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
+        new_node.name = "log(%s)" % node_a.name
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        print(input_vals[0])
+        return np.log(input_vals[0])
+
+    def gradients(self, tnode, output_grad):
+        return [output_grad / tnode.inputs[0]]
 
 
 class PlaceholderOp(Op):
     """Op to feed values to a node"""
+
     def __call__(self):
         new_node = Op.__call__(self)
         return new_node
@@ -298,7 +367,7 @@ class Oneslike_Op(Op):
         return [zerolike_op(tnode.inputs[0])]
 
     def compute(self, tnode, input_vals):
-        assert(isinstance(input_vals[0], np.ndarray))
+        assert (isinstance(input_vals[0], np.ndarray))
         return np.ones(input_vals[0].shape)
 
 
@@ -315,6 +384,20 @@ class Zerolike_Op(Op):
     def compute(self, tnode, input_vals):
         assert (isinstance(input_vals[0], np.ndarray))
         return np.zeros(input_vals[0].shape)
+
+
+class ReduceSum_Op(Op):
+    def __call__(self, node_a):
+        new_node = Op.__call__(self)
+        new_node.name = "reduce_sum(%s)" % node_a.name
+        new_node.inputs = [node_a]
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return np.sum(input_vals[0])
+
+    def gradients(self, tnode, output_grad):
+        return [output_grad * oneslike_op(tnode.inputs[0])]
 
 
 class Executor(object):
@@ -384,6 +467,9 @@ neg_op = Neg_Op()
 oneslike_op = Oneslike_Op()
 zerolike_op = Zerolike_Op()
 matmul_op = MatMul_Op()
+log = Log_Op()
+exp = Exp_Op()
+reduce_sum = ReduceSum_Op()
 
 
 def find_topo_sort(node_list):
@@ -414,6 +500,4 @@ def topo_sort_dfs(node, visited, topo_order):
 
 def sum_parital(node_list):
     """Custom sum function in order to avoid create redundant nodes in Python sum implementation."""
-    from operator import add
-    from functools import reduce
     return reduce(add, node_list)
