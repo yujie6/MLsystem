@@ -2,9 +2,22 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="24f9f916-fc82-4f42-9b1f-22745ce70fa9" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/autodiff.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/autodiff_test .py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/Lesson3_Mnist.py" beforeDir="false" afterPath="$PROJECT_DIR$/StartUp/Lesson3_Mnist.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/~/Music/tensorboard/log/events.out.tfevents.1562636730.yujie6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/~/Music/tensorboard/log/events.out.tfevents.1562636866.yujie6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/~/Music/tensorboard/log/events.out.tfevents.1562636908.yujie6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/~/music/tensorboard-log/events.out.tfevents.1562635844.yujie6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/~/music/tensorboard-log/events.out.tfevents.1562635969.yujie6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/~/music/tensorboard-log/events.out.tfevents.1562636181.yujie6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/~/music/tensorboard-log/events.out.tfevents.1562636188.yujie6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/~/music/tensorboard-log/events.out.tfevents.1562636211.yujie6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StartUp/~/music/tensorboard/log/events.out.tfevents.1562636681.yujie6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/t10k-images-idx3-ubyte.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/t10k-labels-idx1-ubyte.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/train-images-idx3-ubyte.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/train-labels-idx1-ubyte.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lightflow/__init__.py" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -14,13 +27,25 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/StartUp/Lesson1_loss.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="518">
+            <state relative-caret-position="702">
               <caret line="26" column="53" selection-start-line="26" selection-start-column="53" selection-end-line="26" selection-end-column="53" />
               <folding>
                 <element signature="e#0#38#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/StartUp/Lesson3_Mnist.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="297">
+              <caret line="11" column="19" lean-forward="true" selection-start-line="11" selection-start-column="19" selection-end-line="11" selection-end-column="19" />
+              <folding>
+                <element signature="e#0#58#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -79,13 +104,13 @@
         <option value="$PROJECT_DIR$/StartUp/mnist.ipynb" />
         <option value="$PROJECT_DIR$/StartUp/Lesson1_loss.ipynb" />
         <option value="$PROJECT_DIR$/StartUp/Lesson3_Mnist.ipynb" />
-        <option value="$PROJECT_DIR$/StartUp/Lesson3_Mnist.py" />
         <option value="$PROJECT_DIR$/StartUp/Lesson2_board.py" />
         <option value="$PROJECT_DIR$/StartUp/Lesson1_loss.py" />
         <option value="$PROJECT_DIR$/README.md" />
         <option value="$PROJECT_DIR$/autodiff_test .py" />
         <option value="$PROJECT_DIR$/autodiff.py" />
         <option value="$PROJECT_DIR$/main.py" />
+        <option value="$PROJECT_DIR$/StartUp/Lesson3_Mnist.py" />
       </list>
     </option>
   </component>
@@ -105,8 +130,13 @@
         <subPane>
           <expand>
             <path>
-              <item name="TinyTensorflow" type="b2602c69:ProjectViewProjectNode" />
-              <item name="TinyTensorflow" type="462c0819:PsiDirectoryNode" />
+              <item name="Flow" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Flow" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Flow" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Flow" type="462c0819:PsiDirectoryNode" />
+              <item name="StartUp" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -118,7 +148,7 @@
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$USER_HOME$/Music/tensorflow_tutorials-master/python" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
@@ -250,17 +280,18 @@
       <workItem from="1562667957878" duration="1284000" />
       <workItem from="1562679699936" duration="29022000" />
       <workItem from="1562891606524" duration="6480000" />
+      <workItem from="1563243495355" duration="171000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="63576000" />
+    <option name="totallyTimeSpent" value="63747000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="28" width="1920" height="1052" extended-state="6" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.7618148" visible="true" weight="0.26093918" />
-      <window_info id="Structure" order="1" sideWeight="0.23818526" side_tool="true" visible="true" weight="0.26093918" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.76036865" visible="true" weight="0.26414087" />
+      <window_info id="Structure" order="1" sideWeight="0.23963134" side_tool="true" visible="true" weight="0.26414087" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
@@ -273,8 +304,8 @@
       <window_info anchor="bottom" id="Version Control" order="8" />
       <window_info anchor="bottom" id="Database Changes" order="9" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
-      <window_info anchor="bottom" id="Terminal" order="11" weight="0.27710843" />
-      <window_info active="true" anchor="bottom" id="Python Console" order="12" visible="true" weight="0.42059144" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="11" visible="true" weight="0.28696606" />
+      <window_info anchor="bottom" id="Python Console" order="12" weight="0.33515882" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -447,46 +478,11 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/autodiff_test .py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1978">
-          <caret line="274" column="13" selection-start-line="274" selection-start-column="13" selection-end-line="274" selection-end-column="13" />
-          <folding>
-            <element signature="e#17#38#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/autodiff.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1378">
-          <caret line="481" column="9" lean-forward="true" selection-start-line="481" selection-start-column="9" selection-end-line="481" selection-end-column="9" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-            <element signature="e#7523#7932#2" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lightflow/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="54">
-          <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/autodiff_test .py" />
+    <entry file="file://$PROJECT_DIR$/autodiff.py" />
+    <entry file="file://$PROJECT_DIR$/lightflow/__init__.py" />
     <entry file="file://$PROJECT_DIR$/StartUp/Lesson3_Mnist.ipynb">
       <provider selected="true" editor-type-id="jupyter-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/StartUp/Lesson3_Mnist.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="324">
-          <caret line="12" selection-start-line="12" selection-end-line="12" />
-          <folding>
-            <element signature="e#0#58#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/StartUp/Lesson2_board.py">
       <provider selected="true" editor-type-id="text-editor">
@@ -510,17 +506,27 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/StartUp/input_data.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="432">
+        <state relative-caret-position="380">
           <caret line="16" column="30" selection-start-line="16" selection-start-column="30" selection-end-line="16" selection-end-column="30" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/StartUp/Lesson1_loss.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="518">
+        <state relative-caret-position="702">
           <caret line="26" column="53" selection-start-line="26" selection-start-column="53" selection-end-line="26" selection-end-column="53" />
           <folding>
             <element signature="e#0#38#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/StartUp/Lesson3_Mnist.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="297">
+          <caret line="11" column="19" lean-forward="true" selection-start-line="11" selection-start-column="19" selection-end-line="11" selection-end-column="19" />
+          <folding>
+            <element signature="e#0#58#0" expanded="true" />
           </folding>
         </state>
       </provider>

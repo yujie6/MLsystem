@@ -9,4 +9,4 @@ X_train = mnist.train.images
 Y_train = mnist.train.labels
 X_test = mnist.test.images
 Y_test = mnist.test.labels
-
+print(X_test.shape)
