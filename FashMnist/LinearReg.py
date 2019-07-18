@@ -4,21 +4,9 @@ import numpy as np
 
 Fmnist = input_data.read_data_sets("FMNIST/", one_hot=True)
 
-X_train = Fmnist.train.images
-Y_train = Fmnist.train.labels
-X_test = Fmnist.test.images
-Y_test = Fmnist.test.labels
-
-print(X_train.shape)
-print(Y_train.shape)
-
 x = tf.compat.v1.placeholder("float", [None, 784])
-# W1 = tf.Variable(tf.zeros([784, 784]))
 W2 = tf.Variable(tf.zeros([784, 10]))
-# b1 = tf.Variable(tf.zeros([784]))
 b2 = tf.Variable(tf.zeros([10]))
-# y = tf.nn.softmax(tf.matmul(x, W) + b)
-# y1 = tf.compat.v1.nn.softmax(tf.matmul(x, W1) + b1)
 y = tf.compat.v1.nn.softmax(tf.matmul(x, W2) + b2)
 y_ = tf.compat.v1.placeholder("float", [None, 10])
 
