@@ -9,6 +9,12 @@ def ComputeCost(w, X, b_, y):
                      np.matmul(np.transpose(1 - y), np.log(1 - h + 1e-7)))
 
 
+def ComputeAcc(w, X_test, b, Y_test):
+    y_predict = np.matmul(X_test, w) + b
+    accuracy = np.equal(np.argmax(y_predict, 1), np.argmax(Y_test, 1))
+    return np.sum(accuracy) / accuracy.shape[0]
+
+
 def sigmoid(X):
     return 1 / (1 + np.exp(-X))
 
@@ -38,16 +44,15 @@ if __name__ == "__main__":
     Y_test = Fmnist.test.labels
     w = np.ones([784, 10])
     b = np.ones([10])
-    learning_rate = 0.001
+    learning_rate = 0.0007
     for i in range(10000):
         batch_xs, batch_ys = Fmnist.train.next_batch(100)
         if i % 200 == 0:
             print("Epoch %d" % i, end=" Loss: ")
-            print(np.sum(ComputeCost(w, batch_xs, b, batch_ys)))
+            print(np.sum(ComputeCost(w, batch_xs, b, batch_ys)), end=" ")
+            print("Accuracy: %g" % ComputeAcc(w, batch_xs, b, batch_ys))
         w = Optimize(w, learning_rate, batch_xs, batch_ys, b)
 
-    y_predict = np.matmul(X_test, w) + b
-    accuracy = np.equal(np.argmax(y_predict, 1), np.argmax(Y_test, 1))
-    print("Final Accuracy: %g" % (np.sum(accuracy) / accuracy.shape[0]))
+    print("Final Accuracy: %g" % ComputeAcc(w, X_test, b, Y_test))
     print(w)
     print(b)
