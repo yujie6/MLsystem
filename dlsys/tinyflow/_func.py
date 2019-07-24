@@ -99,3 +99,7 @@ def random_normal(shape, mean=0.0, stddev=1.0):
 
 def reshape(node, shape):
     return autodiff.reshape_op(node, shape)
+
+
+def argmax(node, axis):
+    return autodiff.argmax_op(node, axis)

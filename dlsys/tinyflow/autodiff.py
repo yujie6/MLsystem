@@ -446,7 +446,7 @@ class ReduceSum_Op(Op):
                       keepdims=tnode.keep_dims)
 
     def gradients(self, tnode, output_grad):
-        return [output_grad * oneslike_op(tnode.inputs[0])]
+        return [broadcastto_op(output_grad, tnode.inputs[0])]
 
 
 class Init_Op(Op):
@@ -458,6 +458,36 @@ class Init_Op(Op):
 
     def compute(self, tnode, input_vals):
         return
+
+
+class Broadcastto_Op(Op):
+    def __call__(self, node_A, node_B):
+        """Creates a node that represents np.broadcast_to(node_A, node_B.shape).
+        Only support axis=0. e.g. (3,4)->(2,3,4) to make gradient simple.
+        """
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_A, node_B]
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert len(input_vals) == 2
+        tmp = input_vals[0]
+        input_shape = ()
+        output_shape = input_vals[1].shape
+        j = 0
+        for i in range(len(output_shape)):
+            if j < len(tmp.shape) and output_shape[i] == tmp.shape[j]:
+                input_shape = input_shape + (tmp.shape[j],)
+                j = j + 1
+            else:
+                input_shape = input_shape + (1,)
+        tmp = tmp.reshape(input_shape)
+        return np.broadcast_to(tmp, output_shape)
+
+    def gradients(self, node, output_grad):
+        grad_a = reduce_sum(output_grad, node.inputs[0])
+        grad_b = zerolike_op(node.inputs[1])
+        return [grad_a, grad_b]
 
 
 class Assign_Op(Op):
@@ -487,6 +517,8 @@ class Shape_Op(Op):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
         new_node.reduction_indices = reduction_indices
+        if not isinstance(new_node.reduction_indices, list):
+            new_node.reduction_indices = [reduction_indices]
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -496,12 +528,47 @@ class Shape_Op(Op):
         assert len(input_vals) == 1
         shape = np.shape(input_vals[0])
         if len(tnode.reduction_indices) == 1:
-            return shape[tnode.reduction_indices]
+            if tnode.reduction_indices[0] is None:
+                num = 1
+                for i in range(len(shape)):
+                    num *= shape[i]
+                return num
+            return shape[tnode.reduction_indices[0]]
         else:
             num = 1
             for it in tnode.reduction_indices:
                 num = num * shape[it]
             return num
+
+
+class Argmax_Op(Op):
+    def __call__(self, node_a, axis):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
+        new_node.reduction_indices = axis
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return [0]
+
+    def compute(self, tnode, input_vals):
+        assert len(input_vals) == 1
+        return np.argmax(input_vals[0], axis=tnode.reduction_indices)
+
+
+class Equal_Op(Op):
+    def __call__(self, node_a, node_b):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a, node_b]
+        new_node.name = "(%s == %s)" % (node_a.name, node_b.name)
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return None
+
+    def compute(self, tnode, input_vals):
+        assert len(input_vals) == 2
+        return np.equal(input_vals[0], input_vals[1])
 
 
 class Conv2D_Op(Op):
@@ -564,8 +631,10 @@ class Executor(object):
         for node in TopoOrder:
             if isinstance(node.op, PlaceholderOp):
                 continue
-            # print(node.name)
-            vals = [self.ValueNode[subnode] for subnode in node.inputs]
+            if not isinstance(node.op, Const_Op):
+                vals = [self.ValueNode[subnode] for subnode in node.inputs]
+            else:
+                vals = []
             res = node.op.compute(node, vals)
             self.ValueNode[node] = res if isinstance(res, np.ndarray) else np.array(res)
 
@@ -596,18 +665,20 @@ def gradients(node_y, node_x_list):
     ans = [NodeToGrad[node] for node in node_x_list]
     return ans
 
-
+equal_op = Equal_Op()
 conv2d_op = Conv2D_Op()
 maxpool_op = MaxPool_Op()
 dropout_op = DropOut_Op()
 placeholder_op = PlaceholderOp()
 shape_op = Shape_Op()
+broadcastto_op = Broadcastto_Op()
 relu = Relu_Op()
 Variable = VariableOp()
 power_op = Power_Op()
 init_op = Init_Op()
 const_op = Const_Op()
 assign = Assign_Op()
+argmax_op = Argmax_Op()
 mul_op = Mul_Op()
 mulconst_op = MulConst_Op()
 add_op = Add_Op()
