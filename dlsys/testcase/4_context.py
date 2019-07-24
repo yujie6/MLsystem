@@ -7,7 +7,7 @@ import numpy as np
 # adder 
 a = tf.placeholder(tf.float32)
 b = tf.placeholder(tf.float32)
-adder_node = a + b;
+adder_node = a + b
 
 """
 your session should support 'with' statement

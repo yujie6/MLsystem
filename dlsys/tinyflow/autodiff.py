@@ -498,7 +498,6 @@ class Shape_Op(Op):
         if len(tnode.reduction_indices) == 1:
             return shape[tnode.reduction_indices]
         else:
-            exit(0)
             num = 1
             for it in tnode.reduction_indices:
                 num = num * shape[it]

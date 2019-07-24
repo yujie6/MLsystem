@@ -1,20 +1,20 @@
 import os
 import sys
 
-python_cmd = "python3.7"
+python_cmd = "python3"
 testcase_dir = "testcase"
 tests = [
     ["adder",       "1_adder.py"],
     ["initializer", "2_init.py"],
     ["assign",      "3_assign.py"],
     ["context",     "4_context.py"],
-    ["autodiff",    "5_mnist_grad.py"],
-    ["optimizer",   "6_mnist_optimizer.py"],
+    ["autodiff",    "5_autodiff.py"],
+    ["GD optimizer",   "6_gd_optimizer.py"],
     ["multilayer perceptron", "7_ml_perceptron.py"],
-    ["adam optimizer",        "8_adam.py"],
-    ["CNN 0",       "9_cnn_0.py"],
-    ["CNN 1",       "10_cnn_1.py"],
-    ["CNN 2",       "11_cnn_2.py"]
+    ["Adam optimizer",        "8_adam_optimizer.py"],
+    ["CNN Check",       "9_cnn_check.py"],
+    ["CNN GD",       "10_cnn_gd.py"],
+    ["CNN Adam with Dropout",       "11_cnn_adam.py"]
 ]
 
 def main(model_name):
