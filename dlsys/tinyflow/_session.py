@@ -15,7 +15,7 @@ class Session(object):
             fetch = [fetch]
         if not isinstance(feed_dict, dict):
             feed_dict = {}
-
+        # change dict to list, change value to np.array
         for node in feed_dict:
             value = feed_dict[node]
             if not isinstance(value, np.ndarray):

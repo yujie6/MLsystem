@@ -1,5 +1,7 @@
-from ._base import *
+# from ._base import *
 from ._session import *
+from ._func import *
 from . import nn
 from . import train
-from . import _func
+from . import crash_on_ipy
+

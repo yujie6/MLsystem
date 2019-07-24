@@ -452,6 +452,7 @@ def gradients(node_y, node_x_list):
     return ans
 
 
+placeholder_op = PlaceholderOp()
 mul_op = Mul_Op()
 mulconst_op = MulConst_Op()
 add_op = Add_Op()

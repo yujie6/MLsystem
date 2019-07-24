@@ -335,11 +335,26 @@ class Log_Op(Op):
         return new_node
 
     def compute(self, tnode, input_vals):
-        print(input_vals[0])
         return np.log(input_vals[0])
 
     def gradients(self, tnode, output_grad):
         return [output_grad / tnode.inputs[0]]
+
+
+class Power_Op(Op):
+    def __call__(self, node_a, power):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a, power]
+        new_node.name = "%s ^ %s" % (node_a.name, str(power))
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return np.power(input_vals[0], input_vals[1])
+
+    def gradients(self, tnode, output_grad):
+        return [output_grad * tnode.inputs[1] * power_op(tnode.inputs[0], tnode.inputs[1] - 1)
+            , output_grad * log(tnode.inputs[0]) * tnode]
+        # d(a^x)/dx = ln(a) * a^x
 
 
 class PlaceholderOp(Op):
@@ -354,6 +369,35 @@ class PlaceholderOp(Op):
 
     def compute(self, tnode, input_vals):
         pass
+
+
+class VariableOp(Op):
+    def __call__(self):
+        new_node = Op.__call__(self)
+        new_node.value = None
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return None
+
+    def compute(self, tnode, input_vals):
+        assert tnode.value is not None
+        assert len(input_vals) == 0
+        return tnode.value
+
+
+class Const_Op(Op):
+    def __call__(self, value):
+        new_node = Op.__call__(self)
+        new_node.const_attr = value  # should be an instance of np.ndarray??
+        Const_Op.name = str(value)
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return tnode.const_attr
+
+    def gradients(self, tnode, output_grad):
+        return None
 
 
 class Oneslike_Op(Op):
@@ -387,17 +431,126 @@ class Zerolike_Op(Op):
 
 
 class ReduceSum_Op(Op):
-    def __call__(self, node_a):
+    def __call__(self, node_a, reduction_indices=0, keep_dims=False):
+        assert isinstance(reduction_indices, int)
         new_node = Op.__call__(self)
         new_node.name = "reduce_sum(%s)" % node_a.name
         new_node.inputs = [node_a]
+        new_node.reduction_indices = reduction_indices
+        new_node.keep_dims = keep_dims
         return new_node
 
     def compute(self, tnode, input_vals):
-        return np.sum(input_vals[0])
+        assert len(input_vals) == 1
+        return np.sum(input_vals[0], axis=tnode.reduction_indices,
+                      keepdims=tnode.keep_dims)
 
     def gradients(self, tnode, output_grad):
         return [output_grad * oneslike_op(tnode.inputs[0])]
+
+
+class Init_Op(Op):
+    def __call__(self, all_variables):
+        new_node = Op.__call__(self)
+        new_node.name = "Initializer"
+        new_node.inputs = all_variables
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        return
+
+
+class Assign_Op(Op):
+    def __call__(self, assign_node, value):
+        if not isinstance(value, Node):
+            input_node = const_op(value)
+        else:
+            input_node = value
+        assert isinstance(assign_node, Node)
+        new_node = Op.__call__(self)
+        new_node.inputs = [input_node]
+        new_node.assign_to = assign_node
+        new_node.name = "Assign %s to %s" % (input_node.name, assign_node.name)
+        return new_node
+
+    def compute(self, tnode, input_vals):
+        assert len(input_vals) == 1
+        tnode.assign_to.value = input_vals[0]
+        return input_vals[0]
+
+    def gradients(self, tnode, output_grad):
+        assert False, "No gradient for assign node"
+
+
+class Shape_Op(Op):
+    def __call__(self, node_a, reduction_indices):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
+        new_node.reduction_indices = reduction_indices
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return [0]
+
+    def compute(self, tnode, input_vals):
+        assert len(input_vals) == 1
+        shape = np.shape(input_vals[0])
+        if len(tnode.reduction_indices) == 1:
+            return shape[tnode.reduction_indices]
+        else:
+            exit(0)
+            num = 1
+            for it in tnode.reduction_indices:
+                num = num * shape[it]
+            return num
+
+
+class Conv2D_Op(Op):
+    def __call__(self):
+        new_node = Op.__call__(self)
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return None
+
+    def compute(self, tnode, input_vals):
+        pass
+
+
+class MaxPool_Op(Op):
+    def __call__(self):
+        new_node = Op.__call__(self)
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return None
+
+    def compute(self, tnode, input_vals):
+        pass
+
+
+class DropOut_Op(Op):
+    def __call__(self):
+        new_node = Op.__call__(self)
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return None
+
+    def compute(self, tnode, input_vals):
+        pass
+
+
+class Relu_Op(Op):
+    def __call__(self):
+        new_node = Op.__call__(self)
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return None
+
+    def compute(self, tnode, input_vals):
+        pass
 
 
 class Executor(object):
@@ -419,13 +572,6 @@ class Executor(object):
 
         ans = [self.ValueNode[node] for node in self.eval_node_list]
         return ans
-
-
-def Variable(name):
-    new_op = PlaceholderOp()
-    new_node = new_op()
-    new_node.name = name
-    return new_node
 
 
 def gradients(node_y, node_x_list):
@@ -452,6 +598,17 @@ def gradients(node_y, node_x_list):
     return ans
 
 
+conv2d_op = Conv2D_Op()
+maxpool_op = MaxPool_Op()
+dropout_op = DropOut_Op()
+placeholder_op = PlaceholderOp()
+shape_op = Shape_Op()
+relu = Relu_Op()
+Variable = VariableOp()
+power_op = Power_Op()
+init_op = Init_Op()
+const_op = Const_Op()
+assign = Assign_Op()
 mul_op = Mul_Op()
 mulconst_op = MulConst_Op()
 add_op = Add_Op()
