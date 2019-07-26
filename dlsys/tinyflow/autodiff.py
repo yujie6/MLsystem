@@ -377,10 +377,14 @@ class Log_Op(Op):
 
 
 class Power_Op(Op):
-    def __call__(self, node_a, power):
+    def __call__(self, node_A, node_B):
         new_node = Op.__call__(self)
-        new_node.inputs = [node_a, power]
-        new_node.name = "%s ^ %s" % (node_a.name, str(power))
+        if not isinstance(node_A, Node):
+            node_A = const_op(node_A)
+        if not isinstance(node_B, Node):
+            node_B = const_op(node_B)
+        new_node.inputs = [node_A, node_B]
+        new_node.name = "%s ^ %s" % (node_A.name, node_B.name)
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -827,7 +831,6 @@ def sum_parital(node_list):
     return reduce(add, node_list)
 
 
-# TODO: pass test 7
 # TODO: pass test 8
 # TODO: pass test 9
 # TODO: pass test 10
