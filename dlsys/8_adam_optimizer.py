@@ -12,7 +12,7 @@ y = tf.nn.softmax(tf.matmul(x, W) + b)
 y_ = tf.placeholder(tf.float32, [None, 10])
 
 cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y), reduction_indices=[1]))
-train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+train_step = tf.train.AdamOptimizer(0.005).minimize(cross_entropy)
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
@@ -33,4 +33,4 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 ans = sess.run(accuracy, feed_dict={x: mnist.test.images, y_: mnist.test.labels})
 
 print("Accuracy: %.3f" % ans)
-assert ans >= 0.75
+assert ans >= 0.80

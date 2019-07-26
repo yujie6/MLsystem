@@ -1,7 +1,6 @@
 import numpy as np
 from operator import add
 from functools import reduce
-from ._session import *
 
 
 class Node(object):
@@ -65,6 +64,7 @@ class Node(object):
         return new_node
 
     def eval(self, feed_dict):
+        from ._session import Session
         with Session() as sess:
             return sess.run(self, feed_dict=feed_dict)
 
