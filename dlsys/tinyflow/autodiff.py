@@ -1,6 +1,7 @@
 import numpy as np
 from operator import add
 from functools import reduce
+from ._session import *
 
 
 class Node(object):
@@ -63,6 +64,13 @@ class Node(object):
             new_node = rdivconst_op(self, other)
         return new_node
 
+    def eval(self, feed_dict):
+        with Session() as sess:
+            return sess.run(self, feed_dict=feed_dict)
+
+    def run(self, feed_dict):
+        return self.eval(feed_dict=feed_dict)
+
     __radd__ = __add__
     __rmul__ = __mul__
 
@@ -93,7 +101,8 @@ class Mul_Op(Op):
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return [tnode.inputs[1] * output_grad, tnode.inputs[0] * output_grad]
+        return [reduce_sum_to(tnode.inputs[1] * output_grad, tnode.inputs[0]),
+                reduce_sum_to(tnode.inputs[0] * output_grad, tnode.inputs[1])]
 
     def compute(self, tnode, input_vals):
         assert len(input_vals) == 2
@@ -124,10 +133,26 @@ class Add_Op(Op):
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return [output_grad, output_grad]
+        # return [output_grad, output_grad]
+        return [reduce_sum_to(output_grad, tnode.inputs[0]),
+                reduce_sum_to(output_grad, tnode.inputs[1])]
 
     def compute(self, tnode, input_vals):
         return input_vals[0] + input_vals[1]
+
+
+class Inv_Op(Op):
+    def __call__(self, node):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node]
+        return new_node
+
+    def compute(self, node, input_vals, output_val, use_numpy=True):
+        assert len(input_vals) == 1
+        output_val[:] = 1 / input_vals[0]
+
+    def gradient(self, node, output_grad):
+        return [-1 * inv(node.inputs[0] * node.inputs[0]) * output_grad]
 
 
 class AddConst_Op(Op):
@@ -168,7 +193,8 @@ class Sub_Op(Op):
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return [output_grad, -output_grad]
+        return [reduce_sum_to(output_grad, tnode.inputs[0]),
+                reduce_sum_to(-output_grad, tnode.inputs[1])]
 
     def compute(self, tnode, input_vals):
         return input_vals[0] - input_vals[1]
@@ -186,7 +212,7 @@ class SubConst_Op(Op):
         return input_vals[0] - tnode.const_attr
 
     def gradients(self, tnode, output_grad):
-        return [output_grad]
+        return [reduce_sum_to(output_grad, tnode.inputs[0])]
 
 
 class RSubConst_Op(Op):
@@ -201,7 +227,7 @@ class RSubConst_Op(Op):
         return tnode.const_attr - input_vals[0]
 
     def gradients(self, tnode, output_grad):
-        return [-output_grad]
+        return [-reduce_sum_to(output_grad, tnode.inputs[0])]
 
 
 class Div_Op(Op):
@@ -216,10 +242,18 @@ class Div_Op(Op):
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return [output_grad / tnode.inputs[1],
-                -output_grad * tnode.inputs[0] / (tnode.inputs[1] * tnode.inputs[1])]
+        return [reduce_sum_to(output_grad / tnode.inputs[1], tnode.inputs[0]),
+                reduce_sum_to(-output_grad * tnode.inputs[0] / (tnode.inputs[1] * tnode.inputs[1])
+                              , tnode.inputs[1])]
 
     def compute(self, tnode, input_vals):
+        # try:
+        #     assert not np.equal(input_vals[1].all(), 0)
+        # except AssertionError:
+        #     print("shit!!!!", end=" ")
+        #     print(input_vals[1])
+        # else:
+        #     print("ok")
         return input_vals[0] / input_vals[1]
 
 
@@ -249,8 +283,9 @@ class RDiv_Op(Op):
         return input_vals[1] / input_vals[0]
 
     def gradients(self, tnode, output_grad):
-        return [-output_grad * tnode.inputs[1] / (tnode.inputs[0] * tnode.inputs[0]),
-                output_grad / tnode.inputs[0]]
+        return [reduce_sum_to(-output_grad * tnode.inputs[1] / (tnode.inputs[0] * tnode.inputs[0])
+                              , tnode.inputs[0]),
+                reduce_sum_to(output_grad / tnode.inputs[0], tnode.inputs[1])]
 
 
 class RDivConst_Op(Op):
@@ -462,7 +497,8 @@ class Init_Op(Op):
 
 class Broadcastto_Op(Op):
     def __call__(self, node_A, node_B):
-        """Creates a node that represents np.broadcast_to(node_A, node_B.shape).
+        """
+        Creates a node that represents np.broadcast_to(node_A, node_B.shape).
         Only support axis=0. e.g. (3,4)->(2,3,4) to make gradient simple.
         """
         new_node = Op.__call__(self)
@@ -485,7 +521,7 @@ class Broadcastto_Op(Op):
         return np.broadcast_to(tmp, output_shape)
 
     def gradients(self, node, output_grad):
-        grad_a = reduce_sum(output_grad, node.inputs[0])
+        grad_a = reduce_sum_to(output_grad, node.inputs[0])
         grad_b = zerolike_op(node.inputs[1])
         return [grad_a, grad_b]
 
@@ -539,6 +575,31 @@ class Shape_Op(Op):
             for it in tnode.reduction_indices:
                 num = num * shape[it]
             return num
+
+
+class ReduceSumToOp(Op):
+    def __call__(self, node_A, node_B):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_A, node_B]
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert len(input_vals) == 2
+        tmp = input_vals[0]
+        output_shape = input_vals[1].shape
+        for i in range(len(output_shape)):
+            while (i < len(tmp.shape) and
+                   tmp.shape[i] != output_shape[i]):
+                tmp = np.sum(tmp, axis=i)
+        while len(tmp.shape) < len(output_shape):
+            tmp = tmp.reshape(tmp.shape + (1,))
+        assert tmp.shape == output_shape
+        return tmp
+
+    def gradients(self, node, output_grad):
+        grad_A = broadcastto_op(output_grad, node.inputs[0])
+        grad_B = zerolike_op(node.inputs[1])
+        return [grad_A, grad_B]
 
 
 class Argmax_Op(Op):
@@ -608,15 +669,47 @@ class DropOut_Op(Op):
 
 
 class Relu_Op(Op):
-    def __call__(self):
+    def __call__(self, node_a):
         new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return None
+        return [relugradient_op(tnode.inputs[0], output_grad)]
 
     def compute(self, tnode, input_vals):
-        pass
+        # maximum is elementwise
+        return np.maximum(input_vals[0], 0)
+
+
+class ReluGradient_Op(Op):
+    def __call__(self, node_A, node_B):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_A, node_B]
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert len(input_vals) == 2
+        # heaviside function, 0.5 at x=0
+        return (np.sign(input_vals[0]) + 1) * 0.5 * input_vals[1]
+
+    def gradient(self, node, output_grad):
+        raise NotImplementedError
+
+
+class Reshape(Op):
+    def __call__(self, node_a, shape):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_a]
+        new_node.shape = shape
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return [1]
+
+    def compute(self, tnode, input_vals):
+        assert len(input_vals) == 1
+        return np.reshape(input_vals[0], tnode.shape)
 
 
 class Executor(object):
@@ -665,6 +758,7 @@ def gradients(node_y, node_x_list):
     ans = [NodeToGrad[node] for node in node_x_list]
     return ans
 
+
 equal_op = Equal_Op()
 conv2d_op = Conv2D_Op()
 maxpool_op = MaxPool_Op()
@@ -673,6 +767,7 @@ placeholder_op = PlaceholderOp()
 shape_op = Shape_Op()
 broadcastto_op = Broadcastto_Op()
 relu = Relu_Op()
+relugradient_op = ReluGradient_Op()
 Variable = VariableOp()
 power_op = Power_Op()
 init_op = Init_Op()
@@ -691,12 +786,14 @@ divconst_op = DivConst_Op()
 rdiv_op = RDiv_Op()
 rdivconst_op = RDivConst_Op()
 neg_op = Neg_Op()
+inv = Inv_Op()
 oneslike_op = Oneslike_Op()
 zerolike_op = Zerolike_Op()
 matmul_op = MatMul_Op()
 log = Log_Op()
 exp = Exp_Op()
 reduce_sum = ReduceSum_Op()
+reduce_sum_to = ReduceSumToOp()
 
 
 def find_topo_sort(node_list):
@@ -728,3 +825,9 @@ def topo_sort_dfs(node, visited, topo_order):
 def sum_parital(node_list):
     """Custom sum function in order to avoid create redundant nodes in Python sum implementation."""
     return reduce(add, node_list)
+
+
+# TODO: pass test 7
+# TODO: pass test 8
+# TODO: pass test 9
+# TODO: pass test 10

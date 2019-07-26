@@ -32,6 +32,7 @@ class GradientDescentOptimizer(Optimizer):
             assign_nodes.append(assign(para[i],
                                        para[i] - self.learning_rate * grad[i]))
         optimizer = autodiff.init_op(assign_nodes)
+        optimizer.name = "GradientDescentOptimizer"
         # use function assign to update
         return optimizer
 

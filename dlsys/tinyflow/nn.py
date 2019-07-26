@@ -29,3 +29,9 @@ def max_pool(value, ksize, strides, padding):
 
 def dropout(input, keep_prob):
     return autodiff.dropout_op(input, keep_prob)
+
+
+def softmax_cross_entropy_with_logits(logits=None, labels=None):
+    logits_scale = softmax(logits)
+    cost = -autodiff.reduce_sum(autodiff.log(logits_scale) * labels, 1)
+    return cost
