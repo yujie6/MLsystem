@@ -636,28 +636,120 @@ class Equal_Op(Op):
         return np.equal(input_vals[0], input_vals[1])
 
 
+def conv_single_step(a_slice_prev, filter):
+    s = np.sum(np.multiply(a_slice_prev, filter))
+    return s
+
+
 class Conv2D_Op(Op):
-    def __call__(self):
+
+    def __call__(self, input, filter, strides, padding):
         new_node = Op.__call__(self)
+        new_node.inputs = [input, filter]
+        new_node.padding = padding
+        new_node.strides = strides
         return new_node
 
     def gradients(self, tnode, output_grad):
+
         return None
 
     def compute(self, tnode, input_vals):
-        pass
+        input, filter = input_vals
+        import math
+        (f, f, n_C_prev, n_C) = filter.shape
+        if tnode.padding == "SAME":
+            """Pad the image so that the output size is the same as the input size"""
+            pad_h = (input.shape[0] - 1) * tnode.strides[1] + f - input.shape[0]
+            pad_w = (input.shape[1] - 1) * tnode.strides[2] + f - input.shape[1]
+            pad_t = tnode.pad_t = pad_h // 2
+            pad_b = tnode.pad_b = pad_h - pad_t
+            pad_l = tnode.pad_l = pad_w // 2
+            pad_r = tnode.pad_r = pad_w - pad_l
+            A_pad = np.pad(input, ((0, 0), (pad_t, pad_b), (pad_l, pad_r), \
+                                   (0, 0)), "constant")
+        if tnode.padding == "VALID":
+            """No Padding, no care"""
+            A_pad = input
+        (m, n_H_prev, n_W_prev, n_C_prev) = A_pad.shape
+        n_H = math.floor((n_H_prev - f) / tnode.strides[1] + 1)
+        n_W = math.floor((n_W_prev - f) / tnode.strides[2] + 1)
+        ans = np.ones([m, n_H, n_W, n_C])
+        for i in range(m):
+            A_prev = A_pad[i, :, :, :]
+            for h in range(n_H):
+                for w in range(n_W):
+                    for c in range(n_C):
+                        ans[i, h, w, c] = \
+                            conv_single_step(A_prev[h * tnode.strides[1]:h * tnode.strides[1] + f,
+                                             w * tnode.strides[2]:w * tnode.strides[2] + f],
+                                             filter[:, :, :, c])
+                        # conv_single_step(A_prev[h:h + f,
+                        #                  w:w + f],
+                        #                  filter[:, :, :, c])
+
+        """3-D tensor multiply"""
+        return ans
 
 
 class MaxPool_Op(Op):
+    def __call__(self, input, ksize, strides, padding):
+        new_node = Op.__call__(self)
+        new_node.inputs = [input]
+        new_node.ksize = ksize
+        new_node.padding = padding
+        new_node.strides = strides
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return [maxpoolgradient_op(node.inputs[0], output_grad, node)]
+
+    def compute(self, tnode, input_vals):
+        input = input_vals[0]
+        import math
+        (n_C_prev, f, f, n_C) = tnode.ksize
+        if tnode.padding == "SAME":
+            """Pad the image so that the output size is the same as the input size"""
+            # pad_h = (input.shape[1] - 1) * tnode.strides[1] + f - input.shape[1]
+            # pad_w = (input.shape[2] - 1) * tnode.strides[2] + f - input.shape[2]
+            # pad_t = tnode.pad_t = pad_h // 2
+            # pad_b = tnode.pad_b = pad_h - pad_t
+            # pad_l = tnode.pad_l = pad_w // 2
+            # pad_r = tnode.pad_r = pad_w - pad_l
+            # A_pad = np.pad(input, ((0, 0), (pad_t, pad_b), (pad_l, pad_r),
+            #                        (0, 0)), "constant")
+            A_pad = input
+        elif tnode.padding == "VALID":
+            """No Padding, no care"""
+            A_pad = input
+        (m, n_H_prev, n_W_prev, n_C_prev) = input.shape
+
+        if tnode.padding == "VALID":
+            n_H = math.floor((n_H_prev - f) / tnode.strides[1] + 1)
+            n_W = math.floor((n_W_prev - f) / tnode.strides[2] + 1)
+        elif tnode.padding == "SAME":
+            n_H = math.ceil(1.00 * n_H_prev / tnode.strides[1])
+            n_W = math.ceil(1.00 * n_W_prev / tnode.strides[2])
+        ans = np.ones([m, n_H, n_W, n_C_prev])
+        for i in range(n_H):
+            for j in range(n_W):
+                ans[:, i, j, :] = np.max(A_pad[:, i * tnode.strides[1]:i * tnode.strides[1] + f,
+                                         j * tnode.strides[2]:j * tnode.strides[2] + f, :],
+                                         axis=(1, 2))
+        return ans
+
+
+class MaxPoolGradient_Op(Op):
     def __call__(self):
         new_node = Op.__call__(self)
         return new_node
 
-    def gradients(self, tnode, output_grad):
+    def compute(self, tnode, input_vals):
         return None
 
-    def compute(self, tnode, input_vals):
+    def gradients(self, tnode, output_grad):
         pass
+
 
 
 class DropOut_Op(Op):
@@ -766,6 +858,7 @@ def gradients(node_y, node_x_list):
 equal_op = Equal_Op()
 conv2d_op = Conv2D_Op()
 maxpool_op = MaxPool_Op()
+maxpoolgradient_op = MaxPoolGradient_Op()
 dropout_op = DropOut_Op()
 placeholder_op = PlaceholderOp()
 shape_op = Shape_Op()
@@ -830,7 +923,5 @@ def sum_parital(node_list):
     """Custom sum function in order to avoid create redundant nodes in Python sum implementation."""
     return reduce(add, node_list)
 
-
-# TODO: pass test 8
 # TODO: pass test 9
 # TODO: pass test 10
