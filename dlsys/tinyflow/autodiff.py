@@ -63,12 +63,12 @@ class Node(object):
             new_node = rdivconst_op(self, other)
         return new_node
 
-    def eval(self, feed_dict):
+    def eval(self, feed_dict=None):
         from ._session import Session
         with Session() as sess:
             return sess.run(self, feed_dict=feed_dict)
 
-    def run(self, feed_dict):
+    def run(self, feed_dict=None):
         return self.eval(feed_dict=feed_dict)
 
     __radd__ = __add__
@@ -651,8 +651,8 @@ class Conv2D_Op(Op):
         return new_node
 
     def gradients(self, tnode, output_grad):
-
-        return None
+        return [conv2dgradientx_op(tnode.inputs[0], tnode.inputs[1], output_grad, tnode),
+                conv2dgradientw_op(tnode.inputs[0], tnode.inputs[1], output_grad, tnode)]
 
     def compute(self, tnode, input_vals):
         input, filter = input_vals
@@ -666,11 +666,13 @@ class Conv2D_Op(Op):
             pad_b = tnode.pad_b = pad_h - pad_t
             pad_l = tnode.pad_l = pad_w // 2
             pad_r = tnode.pad_r = pad_w - pad_l
-            A_pad = np.pad(input, ((0, 0), (pad_t, pad_b), (pad_l, pad_r), \
+            A_pad = np.pad(input, ((0, 0), (pad_t, pad_b), (pad_l, pad_r),
                                    (0, 0)), "constant")
         if tnode.padding == "VALID":
             """No Padding, no care"""
             A_pad = input
+
+        tnode.X_pad = A_pad
         (m, n_H_prev, n_W_prev, n_C_prev) = A_pad.shape
         n_H = math.floor((n_H_prev - f) / tnode.strides[1] + 1)
         n_W = math.floor((n_W_prev - f) / tnode.strides[2] + 1)
@@ -692,6 +694,106 @@ class Conv2D_Op(Op):
         return ans
 
 
+# TODO: finish the iteration
+class Conv2DGradientXOp(Op):
+    """
+    dW = sum sum a_slice * dH[h,w]
+    dX_slice = sum sum W * dH[h,w]
+    now I finally understand this trick
+    """
+
+    def __call__(self, X, W, dH, src_node):
+        new_node = Op.__call__(self)
+        new_node.inputs = [X, W, dH]
+        new_node.src_node = src_node
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        pass
+
+    def compute(self, tnode, input_vals):
+        X, W, dH = input_vals
+        dX = np.zeros(X.shape)
+        m, n_H_prev, n_W_prev, n_C_prev = X.shape
+        f, f, n_C_prev, n_C = W.shape
+        m, n_H, n_W, n_C = dH.shape
+        _, stride1, stride2, _ = tnode.src_node.strides
+        """
+        First compute gradient for X_pad, then pad back 
+        to the original size
+        """
+        if tnode.src_node.padding == "VALID":
+            for i in range(m):
+                for h in range(n_H):
+                    for w in range(n_W):
+                        for c in range(n_C):
+                            dX[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, c] += np.multiply(
+                                W[i, :, :, c],
+                                dH[i, h, w, c]
+                            )
+        elif tnode.src_node.padding == "SAME":
+            X_pad = tnode.src_node.X_pad
+            dX_pad = np.zeros(X_pad.shape)
+            for i in range(m):
+                for h in range(n_H):
+                    for w in range(n_W):
+                        for c in range(n_C):
+                            dX_pad[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, c] += np.multiply(
+                                W[i, :, :, c],
+                                dH[i, h, w, c]
+                            )
+            dX = dX_pad[:, tnode.src_node.pad_t: X_pad.shape[1] - tnode.origin.pad_b,
+                 tnode.src_node.pad_l: X_pad.shape[2] - tnode.src_node.pad_r, :]
+        assert X.shape == dX.shape
+        return dX
+
+
+class Conv2DGradientWOp(Op):
+    """
+    dW = sum sum a_slice * dH[h,w]
+    dX_slice = sum sum W * dH[h,w]
+    now I finally understand this trick
+    """
+
+    def __call__(self, X, W, dH, src_node):
+        new_node = Op.__call__(self)
+        new_node.inputs = [X, W, dH]
+        new_node.src_node = src_node
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        pass
+
+    def compute(self, tnode, input_vals):
+        X, W, dH = input_vals
+        dW = np.zeros(W.shape)
+        f, f, n_C_prev, n_C = W.shape
+        m, n_H_prev, n_W_prev, n_C_prev = X.shape
+        m, n_H, n_W, n_C = dH.shape
+        _, stride1, stride2, _ = tnode.src_node.strides
+        if tnode.src_node.padding == "VALID":
+            for i in range(m):
+                for h in range(n_H):
+                    for w in range(n_W):
+                        for c in range(n_C):
+                            dW[:, :, :, c] += np.multiply(
+                                X[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, :],
+                                dH[i, h, w, c]
+                            )
+        elif tnode.src_node.padding == "SAME":
+            X_pad = tnode.src_node.X_pad
+            for i in range(m):
+                for h in range(n_H):
+                    for w in range(n_W):
+                        for c in range(n_C):
+                            dW[:, :, :, c] += np.multiply(
+                                X_pad[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, :],
+                                dH[i, h, w, c]
+                            )
+        assert W.shape == dW.shape
+        return dW
+
+
 class MaxPool_Op(Op):
     def __call__(self, input, ksize, strides, padding):
         new_node = Op.__call__(self)
@@ -702,7 +804,7 @@ class MaxPool_Op(Op):
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return [maxpoolgradient_op(node.inputs[0], output_grad, node)]
+        return [maxpoolgradient_op(tnode.inputs[0], tnode, output_grad)]
 
     def compute(self, tnode, input_vals):
         input = input_vals[0]
@@ -739,17 +841,40 @@ class MaxPool_Op(Op):
         return ans
 
 
+def CreatMask(W):
+    mask = (np.max(W) == W)
+    return mask
+
+
 class MaxPoolGradient_Op(Op):
-    def __call__(self):
+    def __call__(self, input, tnode, outputgrad):
         new_node = Op.__call__(self)
+        new_node.inputs = [input, outputgrad]
+        new_node.src_node = tnode
         return new_node
 
     def compute(self, tnode, input_vals):
-        return None
+        X, dH = input_vals
+        m, n_H_prev, n_W_prev, n_C_prev = X.shape
+        m, n_H, n_W, n_C = dH.shape
+        padding, ksize = tnode.src_node.padding, tnode.src_node.ksize
+        _, f, f, _ = ksize
+        stride1, stride2 = tnode.src_node.strides[1], tnode.src_node.strides[2]
+        dX = np.zeros(X.shape)
+        for i in range(m):
+            for h in range(n_H):
+                for w in range(n_W):
+                    for c in range(n_C):
+                        X_slice = X[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, c]
+                        mask = CreatMask(X_slice)
+                        dX[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, c] += np.multiply(
+                            mask,
+                            dH[i, h, w, c]
+                        )
+        return dX
 
     def gradients(self, tnode, output_grad):
         pass
-
 
 
 class DropOut_Op(Op):
@@ -857,6 +982,8 @@ def gradients(node_y, node_x_list):
 
 equal_op = Equal_Op()
 conv2d_op = Conv2D_Op()
+conv2dgradientx_op = Conv2DGradientXOp()
+conv2dgradientw_op = Conv2DGradientWOp()
 maxpool_op = MaxPool_Op()
 maxpoolgradient_op = MaxPoolGradient_Op()
 dropout_op = DropOut_Op()
