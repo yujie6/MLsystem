@@ -1,21 +1,27 @@
 """ import your model here """
 import tinyflow as tf
+
 """ your model should support the following code """
+
 
 def weight_variable(shape):
     initial = tf.random_normal(shape, stddev=0.1)
     return tf.Variable(initial)
 
+
 def bias_variable(shape):
     initial = tf.constant(0.1, shape=shape)
     return tf.Variable(initial)
 
+
 def conv2d(x, W):
-    return tf.nn.conv2d(x, W, strides=[1,1,1,1], padding='SAME')
+    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+
 
 def max_pool_2x2(x):
-    return tf.nn.max_pool(x, ksize=[1,2,2,1], strides=[1,2,2,1],
-            padding='SAME')
+    return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                          padding='SAME')
+
 
 # input
 x = tf.placeholder(tf.float32, shape=[None, 784])
@@ -40,7 +46,7 @@ h_pool1 = max_pool_2x2(h_conv2)
 W_fc1 = weight_variable([7 * 7 * 64, 1024])
 b_fc1 = bias_variable([1024])
 
-h_pool2_flat = tf.reshape(h_pool1, [-1, 7*7*64])
+h_pool2_flat = tf.reshape(h_pool1, [-1, 7 * 7 * 64])
 h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
 # readout layer
@@ -58,8 +64,8 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 # Get the mnist dataset (use tensorflow here)
 from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data_sets("FMNIST/", one_hot=True)
 
+mnist = input_data.read_data_sets("FMNIST/", one_hot=True)
 
 # train and eval
 with tf.Session() as sess:
@@ -67,14 +73,13 @@ with tf.Session() as sess:
     for i in range(1000):
         batch = mnist.train.next_batch(200)
         if i % 50 == 0:
-            train_accuracy = accuracy.eval(feed_dict = { x: batch[0],
-                                           y_: batch[1]})
+            train_accuracy = accuracy.eval(feed_dict={x: batch[0],
+                                                      y_: batch[1]})
             print('Step %d, trainning accuracy %g' % (i, train_accuracy))
 
         train_step.run(feed_dict={x: batch[0], y_: batch[1]})
     batch = mnist.test.next_batch(50000)
-    ans = accuracy.eval(feed_dict={ x:batch[0],
-                                    y_: batch[1]})
+    ans = accuracy.eval(feed_dict={x: batch[0],
+                                   y_: batch[1]})
     print('Test accuracy: %g' % ans)
     assert ans > 0.83
-

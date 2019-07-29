@@ -636,11 +636,6 @@ class Equal_Op(Op):
         return np.equal(input_vals[0], input_vals[1])
 
 
-def conv_single_step(a_slice_prev, filter):
-    s = np.sum(np.multiply(a_slice_prev, filter))
-    return s
-
-
 class Conv2D_Op(Op):
 
     def __call__(self, input, filter, strides, padding):
@@ -677,20 +672,19 @@ class Conv2D_Op(Op):
         n_H = math.floor((n_H_prev - f) / tnode.strides[1] + 1)
         n_W = math.floor((n_W_prev - f) / tnode.strides[2] + 1)
         ans = np.ones([m, n_H, n_W, n_C])
+        print("god damn m = ", m)
         for i in range(m):
             A_prev = A_pad[i, :, :, :]
             for h in range(n_H):
                 for w in range(n_W):
                     for c in range(n_C):
-                        ans[i, h, w, c] = \
-                            conv_single_step(A_prev[h * tnode.strides[1]:h * tnode.strides[1] + f,
-                                             w * tnode.strides[2]:w * tnode.strides[2] + f],
-                                             filter[:, :, :, c])
-                        # conv_single_step(A_prev[h:h + f,
-                        #                  w:w + f],
-                        #                  filter[:, :, :, c])
-
-        """3-D tensor multiply"""
+                        ans[i, h, w, c] = np.sum(np.multiply(
+                            A_prev[h * tnode.strides[1]:h * tnode.strides[1] + f,
+                            w * tnode.strides[2]:w * tnode.strides[2] + f],
+                            filter[:, :, :, c]
+                        ))
+            # print("One damn ", i, "round done")
+        print("endless???")
         return ans
 
 
@@ -878,15 +872,32 @@ class MaxPoolGradient_Op(Op):
 
 
 class DropOut_Op(Op):
-    def __call__(self):
+    def __call__(self, input, keep_prob):
         new_node = Op.__call__(self)
+        new_node.inputs = [input, keep_prob]
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return None
+        return [dropoutgradient_op(tnode, output_grad)]
 
     def compute(self, tnode, input_vals):
+        arr = np.random.random(input_vals[1].shape)
+        tnode.keep_status = arr <= input_vals[1]
+        return input_vals[0] * tnode.keep_status
+
+
+class DropOutGradient_Op(Op):
+    def __call__(self, src_node, dH):
+        new_node = Op.__call__(self)
+        new_node.inputs = [dH]
+        new_node.src_node = src_node
+        return new_node
+
+    def gradients(self, tnode, output_grad):
         pass
+
+    def compute(self, tnode, input_vals):
+        return input_vals[0] * tnode.src_node.keep_status
 
 
 class Relu_Op(Op):
@@ -911,26 +922,39 @@ class ReluGradient_Op(Op):
 
     def compute(self, node, input_vals):
         assert len(input_vals) == 2
-        # heaviside function, 0.5 at x=0
         return (np.sign(input_vals[0]) + 1) * 0.5 * input_vals[1]
 
     def gradient(self, node, output_grad):
         raise NotImplementedError
 
 
-class Reshape(Op):
+class Reshape_Op(Op):
     def __call__(self, node_a, shape):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
-        new_node.shape = shape
+        new_node.shape_to = shape
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return [1]
+        return [reshapegradient_op(output_grad, tnode.inputs[0])]
 
     def compute(self, tnode, input_vals):
         assert len(input_vals) == 1
-        return np.reshape(input_vals[0], tnode.shape)
+        return np.reshape(input_vals[0], tnode.shape_to)
+
+
+class ReshapeGradient_Op(Op):
+    def __call__(self, output_grad, input):
+        new_node = Op.__call__(self)
+        new_node.inputs = [output_grad, input]
+        return new_node
+
+    def gradients(self, tnode, output_grad):
+        return [reshapegradient_op(output_grad, tnode.inputs[0])]
+
+    def compute(self, tnode, input_vals):
+        dH, X = input_vals
+        return np.reshape(dH, X.shape)
 
 
 class Executor(object):
@@ -981,12 +1005,15 @@ def gradients(node_y, node_x_list):
 
 
 equal_op = Equal_Op()
+reshape_op = Reshape_Op()
+reshapegradient_op = ReshapeGradient_Op()
 conv2d_op = Conv2D_Op()
 conv2dgradientx_op = Conv2DGradientXOp()
 conv2dgradientw_op = Conv2DGradientWOp()
 maxpool_op = MaxPool_Op()
 maxpoolgradient_op = MaxPoolGradient_Op()
 dropout_op = DropOut_Op()
+dropoutgradient_op = DropOutGradient_Op()
 placeholder_op = PlaceholderOp()
 shape_op = Shape_Op()
 broadcastto_op = Broadcastto_Op()
