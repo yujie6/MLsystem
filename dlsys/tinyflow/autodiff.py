@@ -76,10 +76,6 @@ class Node(object):
 
 
 class Op(object):
-    """
-    Operation in the graph, such as mul, add, exp...
-    """
-
     def __call__(self):
         new_node = Node()
         new_node.op = self
@@ -133,7 +129,6 @@ class Add_Op(Op):
         return new_node
 
     def gradients(self, tnode, output_grad):
-        # return [output_grad, output_grad]
         return [reduce_sum_to(output_grad, tnode.inputs[0]),
                 reduce_sum_to(output_grad, tnode.inputs[1])]
 
@@ -231,10 +226,6 @@ class RSubConst_Op(Op):
 
 
 class Div_Op(Op):
-    """
-    the computation of grad is relatively complex, it is ok for a graph
-    """
-
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
@@ -247,13 +238,6 @@ class Div_Op(Op):
                               , tnode.inputs[1])]
 
     def compute(self, tnode, input_vals):
-        # try:
-        #     assert not np.equal(input_vals[1].all(), 0)
-        # except AssertionError:
-        #     print("shit!!!!", end=" ")
-        #     print(input_vals[1])
-        # else:
-        #     print("ok")
         return input_vals[0] / input_vals[1]
 
 
@@ -304,22 +288,7 @@ class RDivConst_Op(Op):
 
 
 class MatMul_Op(Op):
-    """Op to matrix multiply two nodes."""
-
     def __call__(self, node_A, node_B, trans_A=False, trans_B=False):
-        """Create a new node that is the result a matrix multiple of two input nodes.
-
-        Parameters
-        ----------
-        node_A: lhs of matrix multiply
-        node_B: rhs of matrix multiply
-        trans_A: whether to transpose node_A
-        trans_B: whether to transpose node_B
-
-        Returns
-        -------
-        Returns a node that is the result a matrix multiple of two input nodes.
-        """
         new_node = Op.__call__(self)
         new_node.matmul_attr_trans_A = trans_A
         new_node.matmul_attr_trans_B = trans_B
@@ -337,7 +306,6 @@ class MatMul_Op(Op):
                 matmul_op(tnode.inputs[0], output_grad, True, False)]
 
     def compute(self, tnode, input_vals):
-        """Given values of input nodes, return result of matrix multiplication."""
         mat_A = input_vals[0]
         mat_B = input_vals[1]
         if tnode.matmul_attr_trans_A:
@@ -398,7 +366,6 @@ class Power_Op(Op):
 
 class PlaceholderOp(Op):
     """Op to feed values to a node"""
-
     def __call__(self):
         new_node = Op.__call__(self)
         return new_node
@@ -787,7 +754,7 @@ class Conv2DGradientWOp(Op):
                 dH_sub = dH[i].reshape([n_W * n_H, n_C])
                 for h in range(n_H):
                     for w in range(n_W):
-                        X_sub = X_pad[i, h*stride1:h*stride1+f, w*stride2:w*stride2+f, :]
+                        X_sub = X_pad[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, :]
                         X_sub_col[h * n_W + w, :] = X_sub.reshape([f * f * n_C_prev])
                 dW_col[:] += np.matmul(X_sub_col.T, dH_sub)
         dW = dW_col.reshape([f, f, n_C_prev, n_C])
@@ -813,14 +780,6 @@ class MaxPool_Op(Op):
         (n_C_prev, f, f, n_C) = tnode.ksize
         if tnode.padding == "SAME":
             """Pad the image so that the output size is the same as the input size"""
-            # pad_h = (input.shape[1] - 1) * tnode.strides[1] + f - input.shape[1]
-            # pad_w = (input.shape[2] - 1) * tnode.strides[2] + f - input.shape[2]
-            # pad_t = tnode.pad_t = pad_h // 2
-            # pad_b = tnode.pad_b = pad_h - pad_t
-            # pad_l = tnode.pad_l = pad_w // 2
-            # pad_r = tnode.pad_r = pad_w - pad_l
-            # A_pad = np.pad(input, ((0, 0), (pad_t, pad_b), (pad_l, pad_r),
-            #                        (0, 0)), "constant")
             A_pad = input
         elif tnode.padding == "VALID":
             """No Padding, no care"""
@@ -864,10 +823,10 @@ class MaxPoolGradient_Op(Op):
         dX = np.zeros(X.shape)
         for h in range(n_H):
             for w in range(n_W):
-                subX = X[:, h*stride1: h*stride1 + ksize[1], w*stride2: w*stride2 + ksize[2], :]
-                subdX = dX[:, h*stride1: h*stride1 + ksize[1], w*stride2: w*stride2 + ksize[2], :]
+                subX = X[:, h * stride1: h * stride1 + ksize[1], w * stride2: w * stride2 + ksize[2], :]
+                subdX = dX[:, h * stride1: h * stride1 + ksize[1], w * stride2: w * stride2 + ksize[2], :]
                 subdX[:] += np.equal(subX, np.max(subX, axis=(1, 2), keepdims=True)) * \
-                           dH[:, h: h + 1, w: w + 1, :]
+                            dH[:, h: h + 1, w: w + 1, :]
         return dX
 
     def gradients(self, tnode, output_grad):
@@ -881,7 +840,7 @@ class DropOut_Op(Op):
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return [dropoutgradient_op(tnode, output_grad)]
+        return [dropoutgradient_op(tnode, output_grad), 0]
 
     def compute(self, tnode, input_vals):
         arr = np.random.random(input_vals[1].shape)
@@ -1079,6 +1038,3 @@ def topo_sort_dfs(node, visited, topo_order):
 def sum_parital(node_list):
     """Custom sum function in order to avoid create redundant nodes in Python sum implementation."""
     return reduce(add, node_list)
-
-# TODO: pass test 9
-# TODO: pass test 10
