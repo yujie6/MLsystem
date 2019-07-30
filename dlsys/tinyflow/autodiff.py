@@ -672,19 +672,23 @@ class Conv2D_Op(Op):
         n_H = math.floor((n_H_prev - f) / tnode.strides[1] + 1)
         n_W = math.floor((n_W_prev - f) / tnode.strides[2] + 1)
         ans = np.ones([m, n_H, n_W, n_C])
-        print("god damn m = ", m)
+        """Reduce 4 loops to 3 loops by dim reduction and matmul"""
+        A_sub_col = np.zeros([n_H * n_W, f * f * n_C_prev])
+        W_col = filter.reshape((f * f * n_C_prev, n_C))
         for i in range(m):
-            A_prev = A_pad[i, :, :, :]
             for h in range(n_H):
                 for w in range(n_W):
-                    for c in range(n_C):
-                        ans[i, h, w, c] = np.sum(np.multiply(
-                            A_prev[h * tnode.strides[1]:h * tnode.strides[1] + f,
-                            w * tnode.strides[2]:w * tnode.strides[2] + f],
-                            filter[:, :, :, c]
-                        ))
-            # print("One damn ", i, "round done")
-        print("endless???")
+                    A_sub = A_pad[i, h * tnode.strides[1]:h * tnode.strides[1] + f,
+                            w * tnode.strides[2]:w * tnode.strides[2] + f, :]
+                    A_sub_col[h * n_W + w, :] = \
+                        A_sub.reshape((1, f * f * n_C_prev))
+                    # ans[i, h, w, c] = np.sum(np.multiply(
+                    #     A_prev[h * tnode.strides[1]:h * tnode.strides[1] + f,
+                    #     w * tnode.strides[2]:w * tnode.strides[2] + f],
+                    #     filter[:, :, :, c]
+                    # ))
+            Y_sub_col = np.matmul(A_sub_col, W_col)
+            ans[i, :] = Y_sub_col.reshape([n_H, n_W, n_C])
         return ans
 
 
