@@ -716,31 +716,32 @@ class Conv2DGradientXOp(Op):
         f, f, n_C_prev, n_C = W.shape
         m, n_H, n_W, n_C = dH.shape
         _, stride1, stride2, _ = tnode.src_node.strides
+        W_col = np.reshape(W, (f * f * n_C_prev, n_C))
+        dH_col = np.reshape(dH, (m * n_H * n_W, n_C))
         """
         First compute gradient for X_pad, then pad back 
         to the original size
         """
         if tnode.src_node.padding == "VALID":
+            dX = np.zeros(X.shape)
             for i in range(m):
+                dH_sub_col = dH_col[i * n_H * n_W: (i + 1) * n_H * n_W, :]
+                dX_col = np.matmul(dH_sub_col, W_col.T)
                 for h in range(n_H):
                     for w in range(n_W):
-                        for c in range(n_C):
-                            dX[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, c] += np.multiply(
-                                W[i, :, :, c],
-                                dH[i, h, w, c]
-                            )
+                        dX[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, :] += \
+                            np.reshape(dX_col[h * n_W + w, :], [f, f, n_C])
         elif tnode.src_node.padding == "SAME":
             X_pad = tnode.src_node.X_pad
             dX_pad = np.zeros(X_pad.shape)
             for i in range(m):
+                dH_sub_col = dH_col[i * n_H * n_W: (i + 1) * n_H * n_W, :]
+                dX_col = np.matmul(dH_sub_col, W_col.T)
                 for h in range(n_H):
                     for w in range(n_W):
-                        for c in range(n_C):
-                            dX_pad[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, c] += np.multiply(
-                                W[i, :, :, c],
-                                dH[i, h, w, c]
-                            )
-            dX = dX_pad[:, tnode.src_node.pad_t: X_pad.shape[1] - tnode.origin.pad_b,
+                        dX_pad[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, :] += \
+                            np.reshape(dX_col[h * n_W + w, :], [f, f, n_C_prev])
+            dX = dX_pad[:, tnode.src_node.pad_t: X_pad.shape[1] - tnode.src_node.pad_b,
                  tnode.src_node.pad_l: X_pad.shape[2] - tnode.src_node.pad_r, :]
         assert X.shape == dX.shape
         return dX
@@ -769,6 +770,8 @@ class Conv2DGradientWOp(Op):
         m, n_H_prev, n_W_prev, n_C_prev = X.shape
         m, n_H, n_W, n_C = dH.shape
         _, stride1, stride2, _ = tnode.src_node.strides
+        dW_col = np.zeros((f * f * n_C_prev, n_C))
+        X_sub_col = np.zeros((n_H * n_W, n_C_prev * f * f))
         if tnode.src_node.padding == "VALID":
             for i in range(m):
                 for h in range(n_H):
@@ -781,13 +784,13 @@ class Conv2DGradientWOp(Op):
         elif tnode.src_node.padding == "SAME":
             X_pad = tnode.src_node.X_pad
             for i in range(m):
+                dH_sub = dH[i].reshape([n_W * n_H, n_C])
                 for h in range(n_H):
                     for w in range(n_W):
-                        for c in range(n_C):
-                            dW[:, :, :, c] += np.multiply(
-                                X_pad[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, :],
-                                dH[i, h, w, c]
-                            )
+                        X_sub = X_pad[i, h*stride1:h*stride1+f, w*stride2:w*stride2+f, :]
+                        X_sub_col[h * n_W + w, :] = X_sub.reshape([f * f * n_C_prev])
+                dW_col[:] += np.matmul(X_sub_col.T, dH_sub)
+        dW = dW_col.reshape([f, f, n_C_prev, n_C])
         assert W.shape == dW.shape
         return dW
 
@@ -859,16 +862,12 @@ class MaxPoolGradient_Op(Op):
         _, f, f, _ = ksize
         stride1, stride2 = tnode.src_node.strides[1], tnode.src_node.strides[2]
         dX = np.zeros(X.shape)
-        for i in range(m):
-            for h in range(n_H):
-                for w in range(n_W):
-                    for c in range(n_C):
-                        X_slice = X[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, c]
-                        mask = CreatMask(X_slice)
-                        dX[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, c] += np.multiply(
-                            mask,
-                            dH[i, h, w, c]
-                        )
+        for h in range(n_H):
+            for w in range(n_W):
+                subX = X[:, h*stride1: h*stride1 + ksize[1], w*stride2: w*stride2 + ksize[2], :]
+                subdX = dX[:, h*stride1: h*stride1 + ksize[1], w*stride2: w*stride2 + ksize[2], :]
+                subdX[:] += np.equal(subX, np.max(subX, axis=(1, 2), keepdims=True)) * \
+                           dH[:, h: h + 1, w: w + 1, :]
         return dX
 
     def gradients(self, tnode, output_grad):
