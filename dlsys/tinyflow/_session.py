@@ -1,13 +1,13 @@
-import numpy as np
 from . import autodiff
 from ._base import *
 
 
 class Session(object):
+    """To build the with ... as ... method"""
     def __enter__(self):
         return self
 
-    def __exit__(self, e_t, e_v, t_b):
+    def __exit__(self, val, type_, trace):
         return None
 
     def run(self, fetch, feed_dict=None):
@@ -26,11 +26,10 @@ class Session(object):
 
         executor = autodiff.Executor(fetch)
         res = executor.run(feed_dict)
+
         for i in range(len(res)):
             if res[i].shape == (1,):
                 res[i] = res[i][0]
-        if len(res) == 1:
-            return res[0]
-        else:
-            return res
+
+        return res[0] if len(res) == 1 else res
 

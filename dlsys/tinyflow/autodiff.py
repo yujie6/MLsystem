@@ -1,8 +1,12 @@
 import numpy as np
 from operator import add
 from functools import reduce
+from ctypes import *
+from ._base import lib
+from ._base import cast_to_ndarray
 
 use_cpp = True
+
 
 class Node(object):
     """
@@ -80,7 +84,7 @@ class Op(object):
     def __call__(self):
         new_node = Node()
         new_node.op = self
-        new_node.name = ""
+        # new_node.name = ""
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -94,7 +98,7 @@ class Mul_Op(Op):
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
-        new_node.name = "%s * %s" % (node_a.name, node_b.name)
+        # new_node.name = "%s * %s" % (node_a.name, node_b.name)
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -111,7 +115,7 @@ class MulConst_Op(Op):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
         new_node.const_attr = const_val
-        new_node.name = "%s * %s" % (node_a.name, str(const_val))
+        # new_node.name = "%s * %s" % (node_a.name, str(const_val))
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -126,7 +130,7 @@ class Add_Op(Op):
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
-        new_node.name = "%s + %s" % (node_a.name, node_b.name)
+        # new_node.name = "%s + %s" % (node_a.name, node_b.name)
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -156,7 +160,7 @@ class AddConst_Op(Op):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
         new_node.const_attr = const_val
-        new_node.name = "%s + %s" % (node_a.name, str(const_val))
+        # new_node.name = "%s + %s" % (node_a.name, str(const_val))
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -171,7 +175,7 @@ class Neg_Op(Op):
     def __call__(self, node_a):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
-        new_node.name = "-%s" % node_a.name
+        # new_node.name = "-%s" % node_a.name
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -185,7 +189,7 @@ class Sub_Op(Op):
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
-        new_node.name = "%s - %s" % (node_a.name, node_b.name)
+        # new_node.name = "%s - %s" % (node_a.name, node_b.name)
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -201,7 +205,7 @@ class SubConst_Op(Op):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
         new_node.const_attr = const_val
-        new_node.name = "%s - %s" % (node_a.name, str(const_val))
+        # new_node.name = "%s - %s" % (node_a.name, str(const_val))
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -216,7 +220,7 @@ class RSubConst_Op(Op):
         new_node = Op.__call__(self)
         new_node.const_attr = const_val
         new_node.inputs = [node_a]
-        new_node.name = "%s - %s" % (str(const_val), node_a.name)
+        # new_node.name = "%s - %s" % (str(const_val), node_a.name)
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -230,7 +234,7 @@ class Div_Op(Op):
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
-        new_node.name = "%s / %s" % (node_a.name, node_b.name)
+        # new_node.name = "%s / %s" % (node_a.name, node_b.name)
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -247,7 +251,7 @@ class DivConst_Op(Op):
         new_node = Op.__call__(self)
         new_node.const_attr = const_val
         new_node.inputs = [node_a]
-        new_node.name = "%s / %s" % (node_a.name, str(const_val))
+        # new_node.name = "%s / %s" % (node_a.name, str(const_val))
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -261,16 +265,17 @@ class RDiv_Op(Op):
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
-        new_node.name = "%s / %s" % (node_b.name, node_a.name)
+        # new_node.name = "%s / %s" % (node_b.name, node_a.name)
         return new_node
 
     def compute(self, tnode, input_vals):
         return input_vals[1] / input_vals[0]
 
     def gradients(self, tnode, output_grad):
-        return [reduce_sum_to(-output_grad * tnode.inputs[1] / (tnode.inputs[0] * tnode.inputs[0])
-                              , tnode.inputs[0]),
-                reduce_sum_to(output_grad / tnode.inputs[0], tnode.inputs[1])]
+        return [reduce_sum_to(-output_grad * tnode.inputs[1] / (tnode.inputs[0] * tnode.inputs[0]),
+                              tnode.inputs[0]),
+                reduce_sum_to(output_grad / tnode.inputs[0],
+                              tnode.inputs[1])]
 
 
 class RDivConst_Op(Op):
@@ -278,7 +283,7 @@ class RDivConst_Op(Op):
         new_node = Op.__call__(self)
         new_node.const_attr = const_val
         new_node.inputs = [node_a]
-        new_node.name = "%s / %s" % (str(const_val), node_a.name)
+        # new_node.name = "%s / %s" % (str(const_val), node_a.name)
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -294,7 +299,7 @@ class MatMul_Op(Op):
         new_node.matmul_attr_trans_A = trans_A
         new_node.matmul_attr_trans_B = trans_B
         new_node.inputs = [node_A, node_B]
-        new_node.name = "matmul(%s, %s, %s, %s)" % (node_A.name, node_B.name, str(trans_A), str(trans_B))
+        # new_node.name = "matmul(%s, %s, %s, %s)" % (node_A.name, node_B.name, str(trans_A), str(trans_B))
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -307,20 +312,43 @@ class MatMul_Op(Op):
                 matmul_op(tnode.inputs[0], output_grad, True, False)]
 
     def compute(self, tnode, input_vals):
-        mat_A = input_vals[0]
-        mat_B = input_vals[1]
-        if tnode.matmul_attr_trans_A:
-            mat_A = mat_A.T
-        if tnode.matmul_attr_trans_B:
-            mat_B = mat_B.T
-        return np.matmul(mat_A, mat_B)
+        if use_cpp:
+            output_shape = [
+                input_vals[0].shape[1] if tnode.matmul_attr_trans_A else input_vals[0].shape[0],
+                input_vals[1].shape[0] if tnode.matmul_attr_trans_B else input_vals[1].shape[1]
+            ]
+            A = input_vals[0].astype(np.float32)
+            B = input_vals[1].astype(np.float32)
+            C = np.zeros(output_shape).astype(np.float32)
+            A_data = A.ctypes.data_as(POINTER(c_float))
+            B_data = B.ctypes.data_as(POINTER(c_float))
+            C_data = C.ctypes.data_as(POINTER(c_float))
+            m = C.shape[0]
+            n = C.shape[1]
+            if tnode.matmul_attr_trans_A:
+                k = A.shape[0]
+            else:
+                k = A.shape[1]
+            lib.matmul(A_data, B_data, C_data,
+                       tnode.matmul_attr_trans_A,
+                       tnode.matmul_attr_trans_B,
+                       m, k, n)
+            return C
+        else:
+            mat_A = input_vals[0]
+            mat_B = input_vals[1]
+            if tnode.matmul_attr_trans_A:
+                mat_A = mat_A.T
+            if tnode.matmul_attr_trans_B:
+                mat_B = mat_B.T
+            return np.matmul(mat_A, mat_B)
 
 
 class Exp_Op(Op):
     def __call__(self, node_a):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
-        new_node.name = "exp(%s)" % (node_a.name)
+        # new_node.name = "exp(%s)" % (node_a.name)
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -335,7 +363,7 @@ class Log_Op(Op):
     def __call__(self, node_a):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
-        new_node.name = "log(%s)" % node_a.name
+        # new_node.name = "log(%s)" % node_a.name
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -353,20 +381,23 @@ class Power_Op(Op):
         if not isinstance(node_B, Node):
             node_B = const_op(node_B)
         new_node.inputs = [node_A, node_B]
-        new_node.name = "%s ^ %s" % (node_A.name, node_B.name)
+        # new_node.name = "%s ^ %s" % (node_A.name, node_B.name)
         return new_node
 
     def compute(self, tnode, input_vals):
         return np.power(input_vals[0], input_vals[1])
 
     def gradients(self, tnode, output_grad):
-        return [output_grad * tnode.inputs[1] * power_op(tnode.inputs[0], tnode.inputs[1] - 1)
-            , output_grad * log(tnode.inputs[0]) * tnode]
+        return [
+            output_grad * tnode.inputs[1] * power_op(tnode.inputs[0], tnode.inputs[1] - 1),
+            output_grad * log(tnode.inputs[0]) * tnode
+        ]
         # d(a^x)/dx = ln(a) * a^x
 
 
 class PlaceholderOp(Op):
     """Op to feed values to a node"""
+
     def __call__(self):
         new_node = Op.__call__(self)
         return new_node
@@ -411,7 +442,7 @@ class Oneslike_Op(Op):
     def __call__(self, node_a):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
-        new_node.name = "Oneslike(%s)" % node_a.name
+        # new_node.name = "Oneslike(%s)" % node_a.name
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -426,7 +457,7 @@ class Zerolike_Op(Op):
     def __call__(self, node_a):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a]
-        new_node.name = "Oneslike(%s)" % node_a.name
+        # new_node.name = "Oneslike(%s)" % node_a.name
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -441,7 +472,7 @@ class ReduceSum_Op(Op):
     def __call__(self, node_a, reduction_indices=0, keep_dims=False):
         assert isinstance(reduction_indices, int)
         new_node = Op.__call__(self)
-        new_node.name = "reduce_sum(%s)" % node_a.name
+        # new_node.name = "reduce_sum(%s)" % node_a.name
         new_node.inputs = [node_a]
         new_node.reduction_indices = reduction_indices
         new_node.keep_dims = keep_dims
@@ -459,7 +490,7 @@ class ReduceSum_Op(Op):
 class Init_Op(Op):
     def __call__(self, all_variables):
         new_node = Op.__call__(self)
-        new_node.name = "Initializer"
+        # new_node.name = "Initializer"
         new_node.inputs = all_variables
         return new_node
 
@@ -500,15 +531,12 @@ class Broadcastto_Op(Op):
 
 class Assign_Op(Op):
     def __call__(self, assign_node, value):
-        if not isinstance(value, Node):
-            input_node = const_op(value)
-        else:
-            input_node = value
+        input_node = const_op(value) if not isinstance(value, Node) else value
         assert isinstance(assign_node, Node)
         new_node = Op.__call__(self)
         new_node.inputs = [input_node]
         new_node.assign_to = assign_node
-        new_node.name = "Assign %s to %s" % (input_node.name, assign_node.name)
+        # new_node.name = "Assign %s to %s" % (input_node.name, assign_node.name)
         return new_node
 
     def compute(self, tnode, input_vals):
@@ -593,7 +621,7 @@ class Equal_Op(Op):
     def __call__(self, node_a, node_b):
         new_node = Op.__call__(self)
         new_node.inputs = [node_a, node_b]
-        new_node.name = "(%s == %s)" % (node_a.name, node_b.name)
+        # new_node.name = "(%s == %s)" % (node_a.name, node_b.name)
         return new_node
 
     def gradients(self, tnode, output_grad):
@@ -614,15 +642,16 @@ class Conv2D_Op(Op):
         return new_node
 
     def gradients(self, tnode, output_grad):
-        return [conv2dgradientx_op(tnode.inputs[0], tnode.inputs[1], output_grad, tnode),
-                conv2dgradientw_op(tnode.inputs[0], tnode.inputs[1], output_grad, tnode)]
+        return [
+            conv2dgradientx_op(tnode.inputs[0], tnode.inputs[1], output_grad, tnode),
+            conv2dgradientw_op(tnode.inputs[0], tnode.inputs[1], output_grad, tnode)
+        ]
 
     def compute(self, tnode, input_vals):
         input, filter = input_vals
         import math
         (f, f, n_C_prev, n_C) = filter.shape
         if tnode.padding == "SAME":
-            """Pad the image so that the output size is the same as the input size"""
             pad_h = (input.shape[0] - 1) * tnode.strides[1] + f - input.shape[0]
             pad_w = (input.shape[1] - 1) * tnode.strides[2] + f - input.shape[1]
             pad_t = tnode.pad_t = pad_h // 2
@@ -632,14 +661,29 @@ class Conv2D_Op(Op):
             A_pad = np.pad(input, ((0, 0), (pad_t, pad_b), (pad_l, pad_r),
                                    (0, 0)), "constant")
         if tnode.padding == "VALID":
-            """No Padding, no care"""
             A_pad = input
 
         tnode.X_pad = A_pad
         (m, n_H_prev, n_W_prev, n_C_prev) = A_pad.shape
         n_H = math.floor((n_H_prev - f) / tnode.strides[1] + 1)
         n_W = math.floor((n_W_prev - f) / tnode.strides[2] + 1)
-        ans = np.ones([m, n_H, n_W, n_C])
+        ans = np.zeros([m, n_H, n_W, n_C])
+        if not use_cpp:
+            A = A_pad.astype(np.float32)
+            filter = filter.astype(np.float32)
+            ans = ans.astype(np.float32)
+            A_in = A.ctypes.data_as(POINTER(c_float))
+            ans = ans.ctypes.data_as(POINTER(c_float))
+            filter_in = filter.astype.data_as(POINTER(c_float))
+            lib.conv2d(
+                A_in, filter_in, ans,
+                m, n_H, n_W, n_C,
+                n_H_prev, n_W_prev, n_C_prev,
+                f, tnode.strides[1], tnode.strides[2]
+            )
+            return ans
+
+
         """Reduce 4 loops to 3 loops by img2col"""
         A_sub_col = np.zeros([n_H * n_W, f * f * n_C_prev])
         W_col = filter.reshape((f * f * n_C_prev, n_C))
@@ -662,7 +706,6 @@ class Conv2DGradientXOp(Op):
     dX_slice = sum sum W * dH[h,w]
     now I finally understand this trick
     """
-
     def __call__(self, X, W, dH, src_node):
         new_node = Op.__call__(self)
         new_node.inputs = [X, W, dH]
@@ -716,7 +759,6 @@ class Conv2DGradientWOp(Op):
     dX_slice = sum sum W * dH[h,w]
     now I finally understand this trick
     """
-
     def __call__(self, X, W, dH, src_node):
         new_node = Op.__call__(self)
         new_node.inputs = [X, W, dH]
@@ -774,14 +816,8 @@ class MaxPool_Op(Op):
         input = input_vals[0]
         import math
         (n_C_prev, f, f, n_C) = tnode.ksize
-        if tnode.padding == "SAME":
-            """Pad the image so that the output size is the same as the input size"""
-            A_pad = input
-        elif tnode.padding == "VALID":
-            """No Padding, no care"""
-            A_pad = input
+        A_pad = input
         (m, n_H_prev, n_W_prev, n_C_prev) = input.shape
-
         if tnode.padding == "VALID":
             n_H = math.floor((n_H_prev - f) / tnode.strides[1] + 1)
             n_W = math.floor((n_W_prev - f) / tnode.strides[2] + 1)
@@ -795,11 +831,6 @@ class MaxPool_Op(Op):
                                          j * tnode.strides[2]:j * tnode.strides[2] + f, :],
                                          axis=(1, 2))
         return ans
-
-
-def CreatMask(W):
-    mask = (np.max(W) == W)
-    return mask
 
 
 class MaxPoolGradient_Op(Op):
@@ -927,24 +958,15 @@ class Executor(object):
         for node in TopoOrder:
             if isinstance(node.op, PlaceholderOp):
                 continue
-            if not isinstance(node.op, Const_Op):
-                vals = [self.ValueNode[subnode] for subnode in node.inputs]
-            else:
-                vals = []
+            vals = [self.ValueNode[subnode] for subnode in node.inputs] \
+                if not isinstance(node.op, Const_Op) else []
             res = node.op.compute(node, vals)
             self.ValueNode[node] = res if isinstance(res, np.ndarray) else np.array(res)
-
         ans = [self.ValueNode[node] for node in self.eval_node_list]
         return ans
 
 
 def gradients(node_y, node_x_list):
-    """
-    Core function
-    :param node_y:
-    :param node_x_list:
-    :return: [partial_y/partial_xi ]
-    """
     PartialList = {node_y: [oneslike_op(node_y)]}
     NodeToGrad = {}
     ReverseTopoOrder = reversed(find_topo_sort([node_y]))
@@ -1022,7 +1044,6 @@ def find_topo_sort(node_list):
 
 
 def topo_sort_dfs(node, visited, topo_order):
-    """Post-order DFS"""
     if node in visited:
         return
     visited.add(node)
@@ -1032,5 +1053,4 @@ def topo_sort_dfs(node, visited, topo_order):
 
 
 def sum_parital(node_list):
-    """Custom sum function in order to avoid create redundant nodes in Python sum implementation."""
     return reduce(add, node_list)

@@ -1,0 +1,4 @@
+/home/yujie6/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/191.6707.69/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/yujie6/Documents/PPCA/MLsystem/dlsys/src
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/yujie6/Documents/PPCA/MLsystem/dlsys/src/cmake-build-debug

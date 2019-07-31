@@ -29,10 +29,11 @@ class GradientDescentOptimizer(Optimizer):
         grad = gradients(cost_function, para)
         assign_nodes = []
         for i in range(len(para)):
-            assign_nodes.append(assign(para[i],
-                                       para[i] - self.learning_rate * grad[i]))
+            assign_nodes.append(assign(
+                       para[i],
+                       para[i] - self.learning_rate * grad[i]
+                       ))
         optimizer = autodiff.init_op(assign_nodes)
-        optimizer.name = "GradientDescentOptimizer"
         # use function assign to update
         return optimizer
 
@@ -63,10 +64,9 @@ class AdamOptimizer(Optimizer):
         for i in range(len(para)):
             _v = (assign(v[i], self.beta2 * v[i] + (1 - self.beta2) * grad[i] * grad[i]))
             _m = assign(m[i], self.beta1 * m[i] + (1 - self.beta1) * grad[i])
-            assign_nodes.append(assign(para[i],
-                                       para[i] - _lr *
-                                       _m / (sqrt(_v) + self.epsilon)))
+            assign_nodes.append(assign(
+                para[i],
+                para[i] - _lr * _m / (sqrt(_v) + self.epsilon)
+            ))
         optimizer = autodiff.init_op(assign_nodes)
-        optimizer.name = "AdamOptimizer"
-        # use function assign to update
         return optimizer
