@@ -325,10 +325,7 @@ class MatMul_Op(Op):
             C_data = C.ctypes.data_as(POINTER(c_float))
             m = C.shape[0]
             n = C.shape[1]
-            if tnode.matmul_attr_trans_A:
-                k = A.shape[0]
-            else:
-                k = A.shape[1]
+            k = A.shape[0] if tnode.matmul_attr_trans_A else A.shape[1]
             lib.matmul(A_data, B_data, C_data,
                        tnode.matmul_attr_trans_A,
                        tnode.matmul_attr_trans_B,
@@ -668,35 +665,34 @@ class Conv2D_Op(Op):
         n_H = math.floor((n_H_prev - f) / tnode.strides[1] + 1)
         n_W = math.floor((n_W_prev - f) / tnode.strides[2] + 1)
         ans = np.zeros([m, n_H, n_W, n_C])
-        if not use_cpp:
+        if use_cpp:
             A = A_pad.astype(np.float32)
             filter = filter.astype(np.float32)
             ans = ans.astype(np.float32)
             A_in = A.ctypes.data_as(POINTER(c_float))
-            ans = ans.ctypes.data_as(POINTER(c_float))
-            filter_in = filter.astype.data_as(POINTER(c_float))
+            ans_in = ans.ctypes.data_as(POINTER(c_float))
+            filter_in = filter.ctypes.data_as(POINTER(c_float))
             lib.conv2d(
-                A_in, filter_in, ans,
+                A_in, filter_in, ans_in,
                 m, n_H, n_W, n_C,
                 n_H_prev, n_W_prev, n_C_prev,
                 f, tnode.strides[1], tnode.strides[2]
             )
             return ans
-
-
-        """Reduce 4 loops to 3 loops by img2col"""
-        A_sub_col = np.zeros([n_H * n_W, f * f * n_C_prev])
-        W_col = filter.reshape((f * f * n_C_prev, n_C))
-        for i in range(m):
-            for h in range(n_H):
-                for w in range(n_W):
-                    A_sub = A_pad[i, h * tnode.strides[1]:h * tnode.strides[1] + f,
-                            w * tnode.strides[2]:w * tnode.strides[2] + f, :]
-                    A_sub_col[h * n_W + w, :] = \
-                        A_sub.reshape((1, f * f * n_C_prev))
-            Y_sub_col = np.matmul(A_sub_col, W_col)
-            ans[i, :] = Y_sub_col.reshape([n_H, n_W, n_C])
-        return ans
+        else:
+            """Reduce 4 loops to 3 loops by img2col"""
+            A_sub_col = np.zeros([n_H * n_W, f * f * n_C_prev])
+            W_col = filter.reshape((f * f * n_C_prev, n_C))
+            for i in range(m):
+                for h in range(n_H):
+                    for w in range(n_W):
+                        A_sub = A_pad[i, h * tnode.strides[1]:h * tnode.strides[1] + f,
+                                w * tnode.strides[2]:w * tnode.strides[2] + f, :]
+                        A_sub_col[h * n_W + w, :] = \
+                            A_sub.reshape((1, f * f * n_C_prev))
+                Y_sub_col = np.matmul(A_sub_col, W_col)
+                ans[i, :] = Y_sub_col.reshape([n_H, n_W, n_C])
+            return ans
 
 
 # TODO: finish the iteration
@@ -739,14 +735,31 @@ class Conv2DGradientXOp(Op):
                             np.reshape(dX_col[h * n_W + w, :], [f, f, n_C])
         elif tnode.src_node.padding == "SAME":
             X_pad = tnode.src_node.X_pad
+            m, n_H_prev, n_W_prev, n_C_prev = X_pad.shape
             dX_pad = np.zeros(X_pad.shape)
-            for i in range(m):
-                dH_sub_col = dH_col[i * n_H * n_W: (i + 1) * n_H * n_W, :]
-                dX_col = np.matmul(dH_sub_col, W_col.T)
-                for h in range(n_H):
-                    for w in range(n_W):
-                        dX_pad[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, :] += \
-                            np.reshape(dX_col[h * n_W + w, :], [f, f, n_C_prev])
+            if use_cpp:
+                dX_pad = dX_pad.astype(np.float32)
+                W = W.astype(np.float32)
+                dH = dH.astype(np.float32)
+                dX_in = dX_pad.ctypes.data_as(POINTER(c_float))
+                W_in = W.ctypes.data_as(POINTER(c_float))
+                dH_in = dH.ctypes.data_as(POINTER(c_float))
+                lib.Conv2dGradientX(
+                    dX_in, dH_in, W_in, m,
+                    n_H_prev, n_W_prev, n_C_prev,
+                    n_H, n_W, n_C,
+                    f, stride1, stride2
+                )
+
+            else:
+                for i in range(m):
+                    dH_sub_col = dH_col[i * n_H * n_W: (i + 1) * n_H * n_W, :]
+                    dX_col = np.matmul(dH_sub_col, W_col.T)
+                    for h in range(n_H):
+                        for w in range(n_W):
+                            dX_pad[i, h * stride1:h * stride1 + f, w * stride2:w * stride2 + f, :] += \
+                                np.reshape(dX_col[h * n_W + w, :], [f, f, n_C_prev])
+
             dX = dX_pad[:, tnode.src_node.pad_t: X_pad.shape[1] - tnode.src_node.pad_b,
                  tnode.src_node.pad_l: X_pad.shape[2] - tnode.src_node.pad_r, :]
         assert X.shape == dX.shape
@@ -775,6 +788,23 @@ class Conv2DGradientWOp(Op):
         m, n_H_prev, n_W_prev, n_C_prev = X.shape
         m, n_H, n_W, n_C = dH.shape
         _, stride1, stride2, _ = tnode.src_node.strides
+        if tnode.src_node.padding == "SAME":
+            X = tnode.src_node.X_pad
+            m, n_H_prev, n_W_prev, n_C_prev = X.shape
+        if use_cpp:
+                dW = dW.astype(np.float32)
+                dH = dH.astype(np.float32)
+                X = X.astype(np.float32)
+                dW_in = dW.ctypes.data_as(POINTER(c_float))
+                dH_in = dH.ctypes.data_as(POINTER(c_float))
+                X_in = X.ctypes.data_as(POINTER(c_float))
+                lib.Conv2dGradientW(
+                    X_in, dH_in, dW_in,
+                    m, n_H_prev, n_W_prev, n_C_prev,
+                    n_H, n_W, n_C,
+                    f, stride1, stride2
+                )
+                return dW
         dW_col = np.zeros((f * f * n_C_prev, n_C))
         X_sub_col = np.zeros((n_H * n_W, n_C_prev * f * f))
         if tnode.src_node.padding == "VALID":
