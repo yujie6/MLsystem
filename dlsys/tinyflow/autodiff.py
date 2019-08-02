@@ -855,6 +855,18 @@ class MaxPool_Op(Op):
             n_H = math.ceil(1.00 * n_H_prev / tnode.strides[1])
             n_W = math.ceil(1.00 * n_W_prev / tnode.strides[2])
         ans = np.ones([m, n_H, n_W, n_C_prev])
+        if use_cpp:
+            Y = ans.astype(np.float32)
+            X = input.astype(np.float32)
+            X_in = X.ctypes.data_as(POINTER(c_float))
+            Y_in = Y.ctypes.data_as(POINTER(c_float))
+            lib.maxpool(
+                X_in, Y_in,
+                m, n_H_prev, n_W_prev, n_C_prev,
+                n_H, n_W, n_C,
+                f, tnode.strides[1], tnode.strides[2]
+            )
+            return Y
         for i in range(n_H):
             for j in range(n_W):
                 ans[:, i, j, :] = np.max(A_pad[:, i * tnode.strides[1]:i * tnode.strides[1] + f,
@@ -878,6 +890,20 @@ class MaxPoolGradient_Op(Op):
         _, f, f, _ = ksize
         stride1, stride2 = tnode.src_node.strides[1], tnode.src_node.strides[2]
         dX = np.zeros(X.shape)
+        if not use_cpp:
+            dX = dX.astype(np.float32)
+            X = X.astype(np.float32)
+            dH = dH.astype(np.float32)
+            dX_in = dX.ctypes.data_as(POINTER(c_float))
+            X_in = X.ctypes.data_as(POINTER(c_float))
+            dH_in = dH.ctypes.data_as(POINTER(c_float))
+            lib.maxpoolgrad(
+                X_in, dH_in, dX_in,
+                m, n_H_prev, n_W_prev, n_C_prev,
+                n_H, n_W, n_C,
+                f, stride1, stride2
+            )
+            return dX
         for h in range(n_H):
             for w in range(n_W):
                 subX = X[:, h * stride1: h * stride1 + ksize[1], w * stride2: w * stride2 + ksize[2], :]
@@ -900,7 +926,7 @@ class DropOut_Op(Op):
         return [dropoutgradient_op(tnode, output_grad), 0]
 
     def compute(self, tnode, input_vals):
-        arr = np.random.random(input_vals[1].shape)
+        arr = np.random.random(input_vals[0].shape)
         tnode.keep_status = arr <= input_vals[1]
         return input_vals[0] * tnode.keep_status
 
