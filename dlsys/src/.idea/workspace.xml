@@ -12,12 +12,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8e18c857-6e72-42ca-a868-1c17f08c7073" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/../../dlsys.zip" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../11_cnn_adam.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.so" beforeDir="false" afterPath="$PROJECT_DIR$/main.so" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../tinyflow/autodiff.py" beforeDir="false" afterPath="$PROJECT_DIR$/../tinyflow/autodiff.py" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -35,8 +31,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="98">
-              <caret line="206" column="42" selection-start-line="206" selection-start-column="42" selection-end-line="206" selection-end-column="42" />
+            <state relative-caret-position="548">
+              <caret line="203" column="37" selection-start-line="203" selection-start-column="37" selection-end-line="203" selection-end-column="37" />
               <folding>
                 <element signature="e#0#19#0" expanded="true" />
               </folding>
@@ -153,16 +149,15 @@
       <workItem from="1564577529644" duration="5077000" />
       <workItem from="1564619858325" duration="4894000" />
       <workItem from="1564636276858" duration="12000" />
-      <workItem from="1564706880990" duration="4047000" />
+      <workItem from="1564706880990" duration="5016000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="21053000" />
+    <option name="totallyTimeSpent" value="22022000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="28" width="1920" height="1052" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.21077909" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -200,8 +195,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="98">
-          <caret line="206" column="42" selection-start-line="206" selection-start-column="42" selection-end-line="206" selection-end-column="42" />
+        <state relative-caret-position="548">
+          <caret line="203" column="37" selection-start-line="203" selection-start-column="37" selection-end-line="203" selection-end-column="37" />
           <folding>
             <element signature="e#0#19#0" expanded="true" />
           </folding>

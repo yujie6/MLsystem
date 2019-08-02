@@ -201,6 +201,7 @@ void maxpoolgradient(
                 std::vector<std::pair<int, int>> maxplace;
                 for (int c = 0; c < n_C_prev; c++) {
                     float max = -1e5;
+                    maxplace.clear();
                     for (int x = h * stride1; x < h * stride1 + f; x++) {
                         for (int y = w * stride2; y < w * stride2 + f; y++) {
                             float diff = XBatch[x * DeltaX + y * n_C_prev + c] - max;
@@ -215,8 +216,7 @@ void maxpoolgradient(
                     }
                     for (auto iter : maxplace) {
                         dXBatch[iter.first * DeltaX + iter.second * n_C_prev + c] +=
-                                dHBatch[h * n_W * n_C_prev + w * n_C_prev + c] *
-                                XBatch[iter.first * DeltaX + iter.second * n_C_prev + c];
+                                dHBatch[h * n_W * n_C_prev + w * n_C_prev + c];
                     }
                 }
             }

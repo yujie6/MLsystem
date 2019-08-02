@@ -890,14 +890,14 @@ class MaxPoolGradient_Op(Op):
         _, f, f, _ = ksize
         stride1, stride2 = tnode.src_node.strides[1], tnode.src_node.strides[2]
         dX = np.zeros(X.shape)
-        if not use_cpp:
+        if use_cpp:
             dX = dX.astype(np.float32)
             X = X.astype(np.float32)
             dH = dH.astype(np.float32)
             dX_in = dX.ctypes.data_as(POINTER(c_float))
             X_in = X.ctypes.data_as(POINTER(c_float))
             dH_in = dH.ctypes.data_as(POINTER(c_float))
-            lib.maxpoolgrad(
+            lib.maxpoolgradient(
                 X_in, dH_in, dX_in,
                 m, n_H_prev, n_W_prev, n_C_prev,
                 n_H, n_W, n_C,
