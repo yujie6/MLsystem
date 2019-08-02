@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cblas.h>
 #include <vector>
+#include <cstring>
 
 using namespace std;
 
@@ -30,8 +31,9 @@ void conv2d(const float *A, const float *filter, float *ans,
             int n_H_prev, int n_W_prev, int n_C_prev,
             int f, int stride1, int stride2
 ) {
-    float *ACol = new float[n_H * n_W * f * f * n_C];
     float *AnsBatch = ans;
+    float * ACol = NULL;
+    ACol = (float *)malloc(sizeof(float) * n_H * n_W * f * f * n_C);
     const float *ABatch = A;
     int DeltaAbatch = n_C_prev * n_W_prev * n_H_prev;
     int DeltaAnsBatch = n_C * n_W * n_H;
@@ -44,11 +46,8 @@ void conv2d(const float *A, const float *filter, float *ans,
                 int index = 0;
                 for (int x = h * stride1; x < h * stride1 + f; x++) {
                     for (int y = w * stride2; y < w * stride2 + f; y++) {
-                        for (int k = 0; k < n_C_prev; k++) {
-                            ASubCol[index++] = ABatch[
-                                    x * DeltaX + y * n_C_prev + k
-                            ]; // <=> ABatch[x][y][k]
-                        }
+                        memcpy(ASubCol + index, ABatch + x * DeltaX + y * n_C_prev, n_C_prev * sizeof(float));
+                        index += n_C_prev;
                     }
                 }
                 ASubCol += DeltaACol;
@@ -59,7 +58,7 @@ void conv2d(const float *A, const float *filter, float *ans,
         ABatch += DeltaAbatch;
         AnsBatch += DeltaAnsBatch;
     }
-    delete[] ACol;
+    free(ACol);
 }
 
 void Conv2dGradientX(
@@ -68,7 +67,8 @@ void Conv2dGradientX(
         int n_H, int n_W, int n_C,
         int f, int stride1, int stride2
 ) {
-    float *DXCol = new float[n_H * n_W * f * f * n_C_prev];
+    float * DXCol = NULL;
+    DXCol = (float *)malloc(sizeof(float) * n_H * n_C * f * f * n_C_prev);
     float *DXBatch = dX;
     const float *DHBatch = dH;
     int DeltaDHBatch = n_H * n_W * n_C;
@@ -85,10 +85,8 @@ void Conv2dGradientX(
                 int index = 0;
                 for (int x = h * stride1; x < h * stride1 + f; x++) {
                     for (int y = w * stride2; y < w * stride2 + f; y++) {
-                        for (int k = 0; k < n_C_prev; k++) {
-                            DXBatch[x * DeltaX + y * n_C_prev + k]
-                                    = DXSubCol[index++];
-                        }
+                        memcpy(DXBatch + x * DeltaX + y * n_C_prev, DXSubCol + index, n_C_prev * sizeof(float));
+                        index += n_C_prev;
                     }
                 }
                 DXSubCol += DeltaDXCol;
@@ -97,7 +95,7 @@ void Conv2dGradientX(
         DHBatch += DeltaDHBatch;
         DXBatch += DeltaDXBatch;
     }
-    delete[] DXCol;
+    free(DXCol);
 }
 
 void Conv2dGradientW(
@@ -106,8 +104,10 @@ void Conv2dGradientW(
         int n_H, int n_W, int n_C,
         int f, int stride1, int stride2
 ) {
-    float *DWBatch = new float[f * f * n_C * n_C_prev];
-    float *XCol = new float[f * f * n_H * n_W * n_C_prev];
+    float * DWBatch = NULL;
+    float * XCol = NULL;
+    DWBatch = (float *)malloc(f * f * n_C * n_C_prev * sizeof(float));
+    XCol = (float *)malloc(f* f * n_H * n_W * n_C_prev * sizeof(float));
     const float *DHBatch = dH;
     const float *XBatch = X;
     int DeltaDHBatch = n_H * n_C * n_W;
@@ -121,11 +121,8 @@ void Conv2dGradientW(
                 int index = 0;
                 for (int x = h * stride1; x < h * stride1 + f; x++) {
                     for (int y = w * stride2; y < w * stride2 + f; y++) {
-                        for (int k = 0; k < n_C_prev; k++) {
-                            XSubCol[index++] = XBatch[
-                                    x * DeltaX + y * n_C_prev + k
-                            ];
-                        }
+                        memcpy(XSubCol + index, XBatch + x * DeltaX + y * n_C_prev, n_C_prev * sizeof(float));
+                        index += n_C_prev;
                     }
                 }
                 XSubCol += DeltaDXCol;
@@ -136,14 +133,14 @@ void Conv2dGradientW(
                f * f * n_C_prev,
                n_H * n_W, n_C
         );
-        for (int r = 0; r < f * f * n_C * n_C_prev; r++) {
+        for (int r = 0; r < f * f * n_C * n_C_prev; r++) { //optimize dest
             dW[r] += DWBatch[r];
         }
         XBatch += DeltaXBatch;
         DHBatch += DeltaDHBatch;
     }
-    delete[] DWBatch;
-    delete[] XCol;
+    free(DWBatch);
+    free(XCol);
 }
 
 
@@ -154,7 +151,6 @@ void maxpool(
         int f, int stride1, int stride2
 ) {
     //puts("maxpool start!");
-    //float *XCol = new float[n_H * n_W * f * f * n_C];
     float *YBatch = Y;
     const float *XBatch = X;
     int DeltaXbatch = n_C_prev * n_W_prev * n_H_prev;
@@ -162,7 +158,6 @@ void maxpool(
     int DeltaXCol = f * f * n_C_prev;
     int DeltaX = n_W_prev * n_C_prev;
     for (int i = 0; i < m; i++) {
-        //float *XSubCol = XCol;
         for (int h = 0; h < n_H; h++) {
             for (int w = 0; w < n_W; w++) {
                 for (int k = 0; k < n_C_prev; k++) {
@@ -206,7 +201,7 @@ void maxpoolgradient(
                         for (int y = w * stride2; y < w * stride2 + f; y++) {
                             float diff = XBatch[x * DeltaX + y * n_C_prev + c] - max;
                             if (diff > 0) {
-                                max = XBatch[x * DeltaX + y * n_C_prev + c]; // max + diff
+                                max = max + diff;
                                 maxplace.clear();
                                 maxplace.emplace_back(std::pair<int, int>(x, y));
                             } else if (diff == 0) {
