@@ -84,7 +84,7 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/home/yujie6/Documents/PPCA/MLsystem/dlsys/src/main.cpp">
+		<Unit filename="/home/yujie6/Documents/PPCA/MLsystem/dlsys/src/main.c">
 			<Option target="mylib"/>
 		</Unit>
 		<Unit filename="/home/yujie6/Documents/PPCA/MLsystem/dlsys/src/CMakeLists.txt">

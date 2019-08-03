@@ -3,4 +3,4 @@ project(mylib)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(mylib main.cpp)
+add_executable(mylib main.c)
