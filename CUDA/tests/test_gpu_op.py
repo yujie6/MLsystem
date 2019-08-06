@@ -2,6 +2,22 @@ import numpy as np
 from dlsys import ndarray, gpu_op, autodiff
 
 
+def test_softmax_cross_entropy():
+    ctx = ndarray.gpu(0)
+    shape = (400, 1000)
+    y = np.random.uniform(-5, 5, shape).astype(np.float32)
+    y_ = np.random.uniform(-5, 5, shape).astype(np.float32)
+    arr_y = ndarray.array(y, ctx=ctx)
+    arr_y_ = ndarray.array(y_, ctx=ctx)
+    arr_out = ndarray.empty((1,), ctx=ctx)
+    gpu_op.softmax_cross_entropy(arr_y, arr_y_, arr_out)
+    out = arr_out.asnumpy()
+    # numpy calculation
+    cross_entropy = np.mean(
+        -np.sum(y_ * np.log(autodiff.softmax_func(y)), axis=1), keepdims=True)
+    np.testing.assert_allclose(cross_entropy, out, rtol=1e-5)
+
+
 def test_array_set():
     ctx = ndarray.gpu(0)
     shape = (500, 200)
@@ -162,17 +178,3 @@ def test_softmax():
     np.testing.assert_allclose(autodiff.softmax_func(x), y, rtol=1e-5)
 
 
-def test_softmax_cross_entropy():
-    ctx = ndarray.gpu(0)
-    shape = (400, 1000)
-    y = np.random.uniform(-5, 5, shape).astype(np.float32)
-    y_ = np.random.uniform(-5, 5, shape).astype(np.float32)
-    arr_y = ndarray.array(y, ctx=ctx)
-    arr_y_ = ndarray.array(y_, ctx=ctx)
-    arr_out = ndarray.empty((1,), ctx=ctx)
-    gpu_op.softmax_cross_entropy(arr_y, arr_y_, arr_out)
-    out = arr_out.asnumpy()
-    # numpy calculation
-    cross_entropy = np.mean(
-        -np.sum(y_ * np.log(autodiff.softmax_func(y)), axis=1), keepdims=True)
-    np.testing.assert_allclose(cross_entropy, out, rtol=1e-5)
