@@ -1,10 +1,12 @@
 #include <cblas.h>
 #include <string.h>
 #include <stdlib.h>
+#include <thread>
 
 #define bool int
 #define true 1
 #define false 0
+const int thread_num = 4;
 
 #ifdef __cplusplus
 extern "C" {
@@ -220,21 +222,44 @@ void maxpoolgradient(
     }
 }
 
+
+void run_relu(float* a, float* result, int n){
+    float *end = a + n;
+    for (; a != end; a++, result++)
+        *result = ((*a) > 0) ? *a : 0;
+}
+
 void relu(float * input, float * output, int size) {
-    for (int i = 1; i <= size; i++) {
-         *output = ((*input) > 0) ? (*input) : 0.0;
-         output++;
-         input++;
+    if(size > 2000000){
+        int k = size / thread_num, rest = size % thread_num;
+        int nums[4] = {k, k, k, k};
+
+        for(int i = 0; i < rest; i++)
+            nums[i]++;
+
+        std::thread th[4];
+        th[0] = std::thread(run_relu, input, output, nums[0]);
+        for(int i = 1; i < thread_num; i++){
+            input += nums[i - 1];
+            output += nums[i - 1];
+            th[i] = std::thread(run_relu, input, output, nums[i]);
+        }
+        for(int i = 0; i < thread_num; i++)
+            th[i].join();
+    }
+    else {
+           for (int i = 1; i <= size; i++) {
+                *output = ((*input) > 0) ? (*input) : 0.0;
+                output++;
+                input++;
+           }
     }
 }
 
-void relugradient(float * input, float * grad, float * output, int size) {
-    for (int i = 1; i <= size; i++) {
-        *output = ((*input) > 0) ? (*grad) : 0.0;
-        input++;
-        grad++;
-        output++;
-    }
+
+void relugradient(float * input, float * output, int size) {
+
+    return;
 }
 
 #ifdef __cplusplus

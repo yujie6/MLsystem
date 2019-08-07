@@ -956,6 +956,15 @@ class Relu_Op(Op):
 
     def compute(self, tnode, input_vals):
         # maximum is elementwise
+        if use_cpp:
+            input = input_vals[0].astype(np.float32)
+            shape = input_vals[0].shape
+            size = input.size
+            output = np.ndarray(shape=shape, dtype=np.float32)
+            in_data = input.ctypes.data_as(POINTER(c_float))
+            out_data = output.ctypes.data_as(POINTER(c_float))
+            lib.relu(in_data, out_data, size)
+            return output
         return np.maximum(input_vals[0], 0)
 
 
@@ -967,6 +976,17 @@ class ReluGradient_Op(Op):
 
     def compute(self, node, input_vals):
         assert len(input_vals) == 2
+        if not use_cpp:
+            shape = input_vals[0].shape
+            size = input_vals[0].size
+            x = input_vals[0].astype(np.float32)
+            grad = input_vals[1].astype(np.float32)
+            x_in = x.ctypes.data_as(POINTER(c_float))
+            grad_in = grad.ctypes.data_as(POINTER(c_float))
+            output = np.ndarray(shape=shape, dtype=np.float32)
+            out_data = output.ctypes.data_as(POINTER(c_float))
+            lib.relugradient(x_in, grad_in, out_data, size)
+            return output
         return (np.sign(input_vals[0]) + 1) * 0.5 * input_vals[1]
 
     def gradient(self, node, output_grad):

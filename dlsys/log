@@ -1,0 +1,28 @@
+ug  7 11:21:02 2019    log
+
+         2981215 function calls (2831642 primitive calls) in 409.156 seconds
+
+		    Ordered by: internal time
+			   List reduced from 9076 to 20 due to restriction <20>
+			      ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+				  1022  113.565    0.111  125.590    0.123 autodiff.py:647(compute)
+1000   93.463    0.093   97.571    0.098 autodiff.py:784(compute)
+							      500   37.330    0.075   40.173    0.080 autodiff.py:714(compute)
+								      26790   33.513    0.001   33.513    0.001 {method 'astype' of 'numpy.ndarray' objects}
+									       1000   28.263    0.028   36.754    0.037 autodiff.py:885(compute)
+										        3022   21.211    0.007   33.167    0.011 autodiff.py:314(compute)
+												     1500   20.939    0.014   20.940    0.014 autodiff.py:968(compute)
+													      1533   11.871    0.008   11.871    0.008 autodiff.py:957(compute)
+														       2544    9.400    0.004    9.400    0.004 autodiff.py:140(compute)
+															        1022    7.992    0.008   15.280    0.015 autodiff.py:845(compute)
+																	     4000    6.930    0.002    6.930    0.002 autodiff.py:199(compute)
+																		      7051    5.646    0.001    5.646    0.001 {built-in method numpy.zeros}
+																			       7049    2.725    0.000    2.725    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+																				        4098    2.650    0.001    2.650    0.001 {built-in method numpy.concatenate}
+																						     4000    2.408    0.001    2.411    0.001 autodiff.py:124(compute)
+																							      5611    1.479    0.000    1.479    0.000 {built-in method numpy.copyto}
+																								      30982    0.966    0.000    1.450    0.000 {built-in method numpy.array}
+																									        511    0.654    0.001  404.980    0.793 autodiff.py:71(eval)
+																											      512    0.591    0.001  404.306    0.790 autodiff.py:1010(run)
+																												      21680    0.485    0.000    0.485    0.000 _internal.py:260(__array_interface__)
+
