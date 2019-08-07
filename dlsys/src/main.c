@@ -135,8 +135,13 @@ void Conv2dGradientW(
                f * f * n_C_prev,
                n_H * n_W, n_C
         );
+        float * tmpdW = dW;
+        float * tmpDWBatch = DWBatch;
         for (int r = 0; r < f * f * n_C * n_C_prev; r++) { //optimize dest
-            dW[r] += DWBatch[r];
+            *tmpdW += *tmpDWBatch;
+            tmpdW++;
+            tmpDWBatch++;
+            //dW[r] += DWBatch[r];
         }
         XBatch += DeltaXBatch;
         DHBatch += DeltaDHBatch;
@@ -164,11 +169,15 @@ void maxpool(
             for (int w = 0; w < n_W; w++) {
                 for (int k = 0; k < n_C_prev; k++) {
                     float max = -1e6;
+                    const float * tmp = XBatch + h*stride1*DeltaX + w*stride2*n_C_prev + k;
                     for (int x = h * stride1; x < h * stride1 + f; x++) {
                         for (int y = w * stride2; y < w * stride2 + f; y++) {
-                            max = max > XBatch[x * DeltaX + y * n_C_prev + k] ?
-                                  max : XBatch[x * DeltaX + y * n_C_prev + k];
+                            //max = max > XBatch[x * DeltaX + y * n_C_prev + k] ?
+                            //      max : XBatch[x * DeltaX + y * n_C_prev + k];
+                            max = max > (*tmp) ? max : (*tmp);
+                            tmp += n_C_prev;
                         }
+                        tmp = tmp + DeltaX - n_C_prev * f;
                     }
                     YBatch[h * n_W * n_C_prev + w * n_C_prev + k] = max;
                 }
