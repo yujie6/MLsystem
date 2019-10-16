@@ -1,1 +1,0 @@
-/usr/bin/cc -g   CMakeFiles/mylib.dir/main.c.o  -o mylib 

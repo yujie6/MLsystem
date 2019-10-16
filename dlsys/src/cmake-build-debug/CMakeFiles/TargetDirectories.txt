@@ -1,3 +1,0 @@
-/home/yujie6/Documents/PPCA/MLsystem/dlsys/src/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/yujie6/Documents/PPCA/MLsystem/dlsys/src/cmake-build-debug/CMakeFiles/mylib.dir
-/home/yujie6/Documents/PPCA/MLsystem/dlsys/src/cmake-build-debug/CMakeFiles/edit_cache.dir

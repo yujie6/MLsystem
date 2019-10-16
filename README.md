@@ -15,7 +15,7 @@ Washington course project</a>
 2. <a href="https://blog.csdn.net/aws3217150/article/details/70214422">Introduction 
 to autodiff</a>
 
-### 3. `/dlsys`
+### 3. `/Tinyflow`
 Build a python package named `tinyflow` with the same API as tensorflow. And use 
 clib to boost the speed.  
 

@@ -24,7 +24,7 @@ init = tf.compat.v1.global_variables_initializer()
 sess = tf.compat.v1.Session()
 sess.run(init)
 
-for i in range(10000):
+for i in range(5000):
     batch_xs, batch_ys = Fmnist.train.next_batch(100)
     if i % 500 == 0:
         print("Epoch: %d" % i, end=", Loss:")
